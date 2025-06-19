@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { CheckIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { db } from '../firebase';
+import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase';
 
 interface TodoItem {
   id: string;
@@ -14,6 +18,8 @@ interface TodoItem {
 }
 
 export default function Todo() {
+  const [user] = useAuthState(auth);
+
   // Clear localStorage if it contains invalid data
   useEffect(() => {
     try {
@@ -41,6 +47,21 @@ export default function Todo() {
     localStorage.setItem('todos', JSON.stringify(todos));
   }, [todos]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(collection(db, 'todos'), where('userId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const todosData = [];
+      querySnapshot.forEach((doc) => {
+        todosData.push({ ...doc.data(), id: doc.id });
+      });
+      setTodos(todosData);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   const generateTaskId = () => {
     const today = new Date();
     const dateStr = today.getFullYear().toString() +
@@ -66,34 +87,34 @@ export default function Todo() {
     return `${dateStr}_${(highestNum + 1).toString().padStart(2, '0')}`;
   };
 
-  const addTodo = () => {
-    if (newTodo.trim()) {
-      const today = new Date();
-      const formattedDate = today.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      
-      setTodos([
-        ...todos,
-        {
-          id: generateTaskId(),
-          text: newTodo,
-          priority: newPriority,
-          project: newProject,
-          dueDate: newDueDate,
-          completed: false,
-          creator: 'You',
-          stakeholder: 'You',
-          created: formattedDate
-        },
-      ]);
-      setNewTodo('');
-      setNewProject('');
-      setNewPriority('medium');
-      setNewDueDate('');
-    }
+  const addTodo = async () => {
+    if (!newTodo.trim() || !user) return;
+
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+    // Save to Firestore
+    await addDoc(collection(db, 'todos'), {
+      text: newTodo,
+      priority: newPriority,
+      project: newProject,
+      dueDate: newDueDate,
+      completed: false,
+      creator: user.displayName || user.email || 'Unknown',
+      stakeholder: user.displayName || user.email || 'Unknown',
+      created: formattedDate,
+      userId: user.uid,
+    });
+
+    // Optionally, clear the input fields
+    setNewTodo('');
+    setNewProject('');
+    setNewPriority('medium');
+    setNewDueDate('');
   };
 
   const deleteTodo = (id: string) => {
@@ -126,7 +147,7 @@ export default function Todo() {
   return (
     <div className="w-screen min-h-screen bg-gray-100 py-7">
       <div className="max-w-full mx-auto pl-8 pr-0">
-        <h1 className="text-2xl font-bold text-gray-900 mb-5">Todo List</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-5">Task Fini: simple to-do list</h1>
         
         <div className="flex gap-5 w-full">
           {/* Add Todo Form */}
