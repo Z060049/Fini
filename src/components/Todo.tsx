@@ -124,32 +124,32 @@ export default function Todo() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8">
-      <div className="max-w-[95%] mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Todo List</h1>
+    <div className="w-screen min-h-screen bg-gray-100 py-7">
+      <div className="max-w-full mx-auto pl-8 pr-0">
+        <h1 className="text-2xl font-bold text-gray-900 mb-5">Todo List</h1>
         
-        <div className="flex gap-8">
+        <div className="flex gap-5 w-full">
           {/* Add Todo Form */}
-          <div className="bg-white rounded-lg shadow p-6 w-80">
+          <div className="bg-white rounded-l-lg shadow p-5 w-72 shrink-0">
             <div className="flex flex-col space-y-4">
               <input
                 type="text"
                 value={newTodo}
                 onChange={(e) => setNewTodo(e.target.value)}
                 placeholder="What needs to be done?"
-                className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="text"
                 value={newProject}
                 onChange={(e) => setNewProject(e.target.value)}
                 placeholder="Project name"
-                className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <select
                 value={newPriority}
                 onChange={(e) => setNewPriority(e.target.value as 'low' | 'medium' | 'high' | 'urgent')}
-                className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="low">Low Priority</option>
                 <option value="medium">Medium Priority</option>
@@ -160,11 +160,11 @@ export default function Todo() {
                 type="date"
                 value={newDueDate}
                 onChange={(e) => setNewDueDate(e.target.value)}
-                className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={addTodo}
-                className="flex items-center justify-center bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                className="flex items-center justify-center bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-base"
               >
                 Add Todo
               </button>
@@ -172,44 +172,40 @@ export default function Todo() {
           </div>
 
           {/* Todo List Table */}
-          <div className="bg-white rounded-lg shadow flex-1 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="bg-white shadow grow overflow-x-auto w-full">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verified</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creator</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stakeholder</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action Date</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[12%]">Task ID</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Verified</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Project</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[50%]">Description</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Priority</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Created</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Due Date</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[4%]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 text-base">
                 {todos.map((todo) => (
                   <tr key={todo.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{todo.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{todo.id}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`h-5 w-5 rounded-full bg-green-100 flex items-center justify-center ${todo.completed ? 'text-green-500' : 'text-gray-300'}`}>
                         <CheckIcon className="h-4 w-4" />
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{todo.text}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getPriorityStyle(todo.priority)}`}>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{todo.project}</td>
+                    <td className="px-4 py-3 text-gray-900 min-w-[200px] max-w-[800px]">{todo.text}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`px-3 py-1 text-sm rounded-full ${getPriorityStyle(todo.priority)}`}>
                         {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{todo.creator}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{todo.stakeholder}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{todo.created}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{todo.dueDate || 'Not scheduled'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{todo.project}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex space-x-4">
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{todo.created}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{todo.dueDate || 'Not scheduled'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex space-x-3">
                         <button 
                           onClick={() => toggleTodo(todo.id)} 
                           className={`${todo.completed ? 'text-green-500' : 'text-gray-400'} hover:text-green-600`}
@@ -236,7 +232,7 @@ export default function Todo() {
                 ))}
                 {todos.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-3 text-center text-gray-500">
                       No todos yet. Add one above!
                     </td>
                   </tr>
