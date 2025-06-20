@@ -4,6 +4,7 @@ import { auth, googleProvider } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import SignInPage from './components/SignInPage';
+import { CheckIcon } from '@heroicons/react/24/outline';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -37,14 +38,24 @@ function App() {
         <SignInPage onGoogleSignIn={handleSignIn} />
       ) : (
         <div>
-          <div className="flex justify-end p-4 bg-white shadow">
-            <span className="mr-4 text-gray-700">{user.displayName}</span>
-            <button
-              onClick={handleSignOut}
-              className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
-            >
-              Sign out
-            </button>
+          <div className="flex justify-between items-center p-4 bg-white shadow">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-100 p-1 rounded-full">
+                <CheckIcon className="h-5 w-5 text-green-600" />
+              </div>
+              <h1 className="text-xl font-bold text-gray-900">Task Fini: simple to-do list</h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                <span className="text-sm font-medium text-gray-700">{user.displayName?.charAt(0)}</span>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="bg-gray-200 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-300"
+              >
+                Sign out
+              </button>
+            </div>
           </div>
           <Todo />
         </div>

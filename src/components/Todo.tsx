@@ -147,7 +147,6 @@ export default function Todo() {
   return (
     <div className="w-screen min-h-screen bg-gray-100 py-7">
       <div className="max-w-full mx-auto pl-8 pr-0">
-        <h1 className="text-2xl font-bold text-gray-900 mb-5">Task Fini: simple to-do list</h1>
         
         <div className="flex gap-5 w-full">
           {/* Add Todo Form */}
