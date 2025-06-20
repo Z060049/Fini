@@ -228,17 +228,17 @@ export default function Todo() {
               <div className="mt-6">
                 <h3 className="text-md font-semibold mb-3">Import Tasks</h3>
                 <div className="flex flex-col space-y-2">
-                   <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
+                  <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
+                    <img src={GmailIconSrc} alt="Gmail" className="h-5 w-5" />
+                    <span>Gmail</span>
+                  </button>
+                  <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
                     <img src={SlackIconSrc} alt="Slack" className="h-5 w-5" />
                     <span>Slack</span>
                   </button>
                   <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
                     <img src={ZoomIconSrc} alt="Zoom" className="h-5 w-5" />
                     <span>Zoom</span>
-                  </button>
-                   <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
-                    <img src={GmailIconSrc} alt="Gmail" className="h-5 w-5" />
-                    <span>Gmail</span>
                   </button>
                 </div>
               </div>
