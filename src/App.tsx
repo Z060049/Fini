@@ -38,20 +38,20 @@ function App() {
         <SignInPage onGoogleSignIn={handleSignIn} />
       ) : (
         <div>
-          <div className="flex justify-between items-center p-4 bg-white shadow">
+          <div className="flex justify-between items-center p-4 bg-gray-800 shadow">
             <div className="flex items-center gap-3">
               <div className="bg-green-100 p-1 rounded-full">
                 <CheckIcon className="h-5 w-5 text-green-600" />
               </div>
-              <h1 className="text-xl font-bold text-gray-900">Task Fini: simple to-do list</h1>
+              <h1 className="text-xl font-bold text-gray-100">Task Fini: simple to-do list</h1>
             </div>
             <div className="flex items-center gap-4">
-              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-700">{user.displayName?.charAt(0)}</span>
+              <div className="h-8 w-8 rounded-full bg-gray-600 flex items-center justify-center">
+                <span className="text-sm font-medium text-gray-200">{user.displayName?.charAt(0)}</span>
               </div>
               <button
                 onClick={handleSignOut}
-                className="bg-gray-200 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-300"
+                className="bg-gray-700 px-3 py-1.5 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-600"
               >
                 Sign out
               </button>

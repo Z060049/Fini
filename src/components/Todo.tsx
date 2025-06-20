@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { CheckIcon, PencilIcon, TrashIcon, Bars3Icon } from '@heroicons/react/24/outline';
+import { CheckIcon, PencilIcon, TrashIcon, Bars3Icon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import type { DropResult } from 'react-beautiful-dnd';
+import SlackIconSrc from '../assets/img/slack.svg';
+import ZoomIconSrc from '../assets/img/zoom.svg';
+import GmailIconSrc from '../assets/img/gmail.svg';
+import { CircularProgress } from './CircularProgress';
 
 interface TodoItem {
   id: string;
@@ -16,6 +20,8 @@ interface TodoItem {
   creator: string;
   stakeholder: string;
   created: string;
+  source: 'manual' | 'slack' | 'zoom' | 'gmail';
+  progress: number;
   userId?: string;
   timestamp?: any;
 }
@@ -59,7 +65,9 @@ export default function Todo() {
       stakeholder: user.displayName || user.email || 'Unknown',
       created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
       userId: user.uid,
-      timestamp: new Date()
+      timestamp: new Date(),
+      source: 'manual',
+      progress: 0,
     });
 
     setNewTodo('');
@@ -108,6 +116,20 @@ export default function Todo() {
     }
   };
 
+  const SourceIcon = ({ source }: { source: string }) => {
+    switch (source) {
+      case 'slack':
+        return <img src={SlackIconSrc} alt="Slack" className="h-5 w-5" />;
+      case 'zoom':
+        return <img src={ZoomIconSrc} alt="Zoom" className="h-5 w-5" />;
+      case 'gmail':
+        return <img src={GmailIconSrc} alt="Gmail" className="h-5 w-5" />;
+      case 'manual':
+      default:
+        return <PencilSquareIcon className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
   const renderTodoList = (status: 'To do' | 'Doing' | 'Done') => {
     const filteredTodos = todos.filter(todo => todo.status === status);
     
@@ -119,7 +141,9 @@ export default function Todo() {
             <span className="w-12 shrink-0"></span> {/* Spacer for handle + checkbox */}
             <span className="flex-1 px-2">Task</span>
             <span className="w-40 shrink-0">Project</span>
+            <span className="w-24 shrink-0 text-center">Source</span>
             <span className="w-28 shrink-0 text-center">Priority</span>
+            <span className="w-24 shrink-0 text-center">Progress</span>
             <span className="w-28 shrink-0 text-center">Due Date</span>
             <span className="w-20 shrink-0 text-center">Actions</span>
           </div>
@@ -149,10 +173,16 @@ export default function Todo() {
                       </button>
                       <span className="flex-1 px-2 text-gray-800">{todo.text}</span>
                       <span className="w-40 shrink-0 text-gray-600">{todo.project}</span>
+                      <span className="w-24 shrink-0 flex justify-center">
+                        <SourceIcon source={todo.source} />
+                      </span>
                       <span className="w-28 shrink-0 text-center">
                         <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(todo.priority)}`}>
                           {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}
                         </span>
+                      </span>
+                      <span className="w-24 shrink-0 flex justify-center">
+                        <CircularProgress progress={todo.progress || 0} size={32} />
                       </span>
                       <span className="w-28 shrink-0 text-center text-gray-600">{todo.dueDate || 'Not scheduled'}</span>
                       <div className="w-20 shrink-0 flex justify-center space-x-2">
@@ -193,6 +223,24 @@ export default function Todo() {
                 </select>
                 <input type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 <button onClick={addTodo} className="flex items-center justify-center bg-blue-500 text-white px-3 py-1.5 rounded-md hover:bg-blue-600 transition-colors text-sm">Add Todo</button>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-md font-semibold mb-3">Import Tasks</h3>
+                <div className="flex flex-col space-y-2">
+                   <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
+                    <img src={SlackIconSrc} alt="Slack" className="h-5 w-5" />
+                    <span>Slack</span>
+                  </button>
+                  <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
+                    <img src={ZoomIconSrc} alt="Zoom" className="h-5 w-5" />
+                    <span>Zoom</span>
+                  </button>
+                   <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
+                    <img src={GmailIconSrc} alt="Gmail" className="h-5 w-5" />
+                    <span>Gmail</span>
+                  </button>
+                </div>
               </div>
             </div>
             {/* Main Content Area */}
