@@ -57,7 +57,7 @@ function App() {
               </button>
             </div>
           </div>
-          <Todo />
+          <Todo importSources={['gmail', 'slack', 'zoom']} />
         </div>
       )}
     </div>
