@@ -9,6 +9,16 @@ import SlackIconSrc from '../assets/img/slack.svg';
 import ZoomIconSrc from '../assets/img/zoom.svg';
 import GmailIconSrc from '../assets/img/gmail.svg';
 import { CircularProgress } from './CircularProgress';
+import { useGoogleLogin } from '@react-oauth/google';
+import { gapi } from 'gapi-script';
+import { GmailModal } from './GmailModal';
+
+interface GmailEmail {
+  id: string;
+  subject: string;
+  from: string;
+  date: string;
+}
 
 interface TodoItem {
   id: string;
@@ -33,6 +43,9 @@ export default function Todo() {
   const [newProject, setNewProject] = useState('');
   const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [newDueDate, setNewDueDate] = useState('');
+  const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
+  const [gmailEmails, setGmailEmails] = useState<GmailEmail[]>([]);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -51,6 +64,85 @@ export default function Todo() {
 
     return () => unsubscribe();
   }, [user]);
+
+  const handleGmailAuth = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      console.log(tokenResponse);
+      const accessToken = tokenResponse.access_token;
+      
+      gapi.load('client', async () => {
+        gapi.client.setApiKey(import.meta.env.VITE_GOOGLE_API_KEY!);
+        gapi.client.setToken({ access_token: accessToken });
+        await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest');
+        
+        const response = await (gapi.client as any).gmail.users.messages.list({
+          'userId': 'me',
+          'q': 'category:primary',
+          'maxResults': 10,
+        });
+
+        const messages = response.result.messages;
+        console.log(`Found ${messages ? messages.length : 0} emails in Primary inbox.`);
+        if (messages && messages.length > 0) {
+          const fetchedEmails: GmailEmail[] = [];
+          for (const message of messages) {
+            const msg = await (gapi.client as any).gmail.users.messages.get({
+              'userId': 'me',
+              'id': message.id!,
+              'format': 'metadata',
+              'metadataHeaders': ['Subject', 'From', 'Date']
+            });
+            const headers = msg.result.payload!.headers!;
+            const subject = headers.find((h: any) => h.name === 'Subject')?.value || 'No Subject';
+            const from = headers.find((h: any) => h.name === 'From')?.value || 'Unknown Sender';
+            const date = headers.find((h: any) => h.name === 'Date')?.value || '';
+
+            fetchedEmails.push({ id: message.id, subject, from, date });
+          }
+          setGmailEmails(fetchedEmails);
+          setIsGmailModalOpen(true);
+        } else {
+          console.log('No emails found in the last 7 days.');
+        }
+      });
+    },
+    onError: (error) => console.log('Login Failed:', error),
+    scope: 'https://www.googleapis.com/auth/gmail.readonly',
+  });
+
+  const handleEmailSelect = (emailId: string) => {
+    setSelectedEmails(prev => 
+      prev.includes(emailId) ? prev.filter(id => id !== emailId) : [...prev, emailId]
+    );
+  };
+
+  const convertEmailsToTodos = async () => {
+    if (!user) return;
+    const emailsToConvert = gmailEmails.filter(email => selectedEmails.includes(email.id));
+    
+    for (const email of emailsToConvert) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      await addDoc(collection(db, 'todos'), {
+        text: email.subject,
+        priority: 'medium',
+        project: 'Inbox',
+        dueDate: tomorrow.toISOString().split('T')[0],
+        status: 'To do',
+        creator: user.displayName || user.email || 'Unknown',
+        stakeholder: email.from,
+        created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+        userId: user.uid,
+        timestamp: new Date(),
+        source: 'gmail',
+        progress: 0,
+      });
+    }
+
+    setIsGmailModalOpen(false);
+    setSelectedEmails([]);
+  };
 
   const addTodo = async () => {
     if (!newTodo.trim() || !user) return;
@@ -228,7 +320,7 @@ export default function Todo() {
               <div className="mt-6">
                 <h3 className="text-md font-semibold mb-3">Import Tasks</h3>
                 <div className="flex flex-col space-y-2">
-                  <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
+                  <button onClick={() => handleGmailAuth()} className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm">
                     <img src={GmailIconSrc} alt="Gmail" className="h-5 w-5" />
                     <span>Gmail</span>
                   </button>
@@ -253,6 +345,14 @@ export default function Todo() {
             </div>
           </div>
         </div>
+        <GmailModal 
+          isOpen={isGmailModalOpen} 
+          onClose={() => setIsGmailModalOpen(false)} 
+          emails={gmailEmails}
+          selectedEmails={selectedEmails}
+          onEmailSelect={handleEmailSelect}
+          onConvertToTodo={convertEmailsToTodos}
+        />
       </div>
     </DragDropContext>
   );
