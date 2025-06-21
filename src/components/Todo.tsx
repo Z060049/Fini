@@ -120,18 +120,27 @@ export default function Todo() {
     if (!user) return;
     const emailsToConvert = gmailEmails.filter(email => selectedEmails.includes(email.id));
     
+    const getSenderName = (fromHeader: string) => {
+      const match = fromHeader.match(/(.*)<.*>/);
+      return match ? match[1].trim().replace(/"/g, '') : fromHeader;
+    };
+
     for (const email of emailsToConvert) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
+      const senderName = getSenderName(email.from);
+      const truncatedSender = senderName.length > 10 ? `${senderName.substring(0, 10)}...` : senderName;
+      const truncatedSubject = email.subject.length > 20 ? `${email.subject.substring(0, 20)}...` : email.subject;
+
       await addDoc(collection(db, 'todos'), {
-        text: email.subject,
+        text: `reply ${truncatedSender} about ${truncatedSubject}`,
         priority: 'medium',
         project: 'Inbox',
         dueDate: tomorrow.toISOString().split('T')[0],
         status: 'To do',
         creator: user.displayName || user.email || 'Unknown',
-        stakeholder: email.from,
+        stakeholder: senderName,
         created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
         userId: user.uid,
         timestamp: new Date(),
