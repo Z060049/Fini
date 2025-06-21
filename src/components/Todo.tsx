@@ -44,6 +44,7 @@ export default function Todo() {
   const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [newDueDate, setNewDueDate] = useState('');
   const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
+  const [isGmailLoading, setIsGmailLoading] = useState(false);
   const [gmailEmails, setGmailEmails] = useState<GmailEmail[]>([]);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
 
@@ -70,43 +71,57 @@ export default function Todo() {
       console.log(tokenResponse);
       const accessToken = tokenResponse.access_token;
       
+      setIsGmailModalOpen(true);
+      setIsGmailLoading(true);
+
       gapi.load('client', async () => {
         gapi.client.setApiKey(import.meta.env.VITE_GOOGLE_API_KEY!);
         gapi.client.setToken({ access_token: accessToken });
         await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest');
         
-        const response = await (gapi.client as any).gmail.users.messages.list({
-          'userId': 'me',
-          'q': 'category:primary',
-          'maxResults': 10,
-        });
+        try {
+          const response = await (gapi.client as any).gmail.users.messages.list({
+            'userId': 'me',
+            'q': 'category:primary',
+            'maxResults': 10,
+          });
 
-        const messages = response.result.messages;
-        console.log(`Found ${messages ? messages.length : 0} emails in Primary inbox.`);
-        if (messages && messages.length > 0) {
-          const fetchedEmails: GmailEmail[] = [];
-          for (const message of messages) {
-            const msg = await (gapi.client as any).gmail.users.messages.get({
-              'userId': 'me',
-              'id': message.id!,
-              'format': 'metadata',
-              'metadataHeaders': ['Subject', 'From', 'Date']
-            });
-            const headers = msg.result.payload!.headers!;
-            const subject = headers.find((h: any) => h.name === 'Subject')?.value || 'No Subject';
-            const from = headers.find((h: any) => h.name === 'From')?.value || 'Unknown Sender';
-            const date = headers.find((h: any) => h.name === 'Date')?.value || '';
+          const messages = response.result.messages;
+          console.log(`Found ${messages ? messages.length : 0} emails in Primary inbox.`);
+          if (messages && messages.length > 0) {
+            const fetchedEmails: GmailEmail[] = [];
+            for (const message of messages) {
+              const msg = await (gapi.client as any).gmail.users.messages.get({
+                'userId': 'me',
+                'id': message.id!,
+                'format': 'metadata',
+                'metadataHeaders': ['Subject', 'From', 'Date']
+              });
+              const headers = msg.result.payload!.headers!;
+              const subject = headers.find((h: any) => h.name === 'Subject')?.value || 'No Subject';
+              const from = headers.find((h: any) => h.name === 'From')?.value || 'Unknown Sender';
+              const date = headers.find((h: any) => h.name === 'Date')?.value || '';
 
-            fetchedEmails.push({ id: message.id, subject, from, date });
+              fetchedEmails.push({ id: message.id, subject, from, date });
+            }
+            setGmailEmails(fetchedEmails);
+          } else {
+            console.log('No emails found in the last 7 days.');
+            setGmailEmails([]);
           }
-          setGmailEmails(fetchedEmails);
-          setIsGmailModalOpen(true);
-        } else {
-          console.log('No emails found in the last 7 days.');
+        } catch (error) {
+            console.error('Error fetching emails:', error);
+            // Optionally, handle the error in the UI
+        } finally {
+            setIsGmailLoading(false);
         }
       });
     },
-    onError: (error) => console.log('Login Failed:', error),
+    onError: (error) => {
+      console.log('Login Failed:', error)
+      setIsGmailModalOpen(false);
+      setIsGmailLoading(false);
+    },
     scope: 'https://www.googleapis.com/auth/gmail.readonly',
   });
 
@@ -358,6 +373,7 @@ export default function Todo() {
           isOpen={isGmailModalOpen} 
           onClose={() => setIsGmailModalOpen(false)} 
           emails={gmailEmails}
+          isLoading={isGmailLoading}
           selectedEmails={selectedEmails}
           onEmailSelect={handleEmailSelect}
           onConvertToTodo={convertEmailsToTodos}
