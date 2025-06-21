@@ -26,17 +26,17 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 sm:p-6 md:p-8">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-6 sm:p-8 md:p-12">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center p-4 md:p-6 border-b">
-          <h2 className="text-lg font-semibold">Select Emails to Convert</h2>
+          <h2 className="text-lg font-semibold">Select Emails to Convert to to-dos</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
         </div>
         <div className="flex-grow overflow-y-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
               <tr>
-                <th scope="col" className="p-4">
+                <th scope="col" className="px-6 py-3">
                   <div className="flex items-center">
                     <input id="checkbox-all-search" type="checkbox" className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" />
                     <label htmlFor="checkbox-all-search" className="sr-only">checkbox</label>
@@ -50,7 +50,7 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
             <tbody>
               {emails.map(email => (
                 <tr key={email.id} className="bg-white border-b hover:bg-gray-50">
-                  <td className="w-4 p-4">
+                  <td className="w-4 px-6 py-4">
                     <div className="flex items-center">
                       <input 
                         id={`checkbox-table-search-${email.id}`} 
@@ -63,7 +63,7 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
                     </div>
                   </td>
                   <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{getSenderName(email.from)}</td>
-                  <td className="px-6 py-4 max-w-md truncate" title={email.subject}>{email.subject}</td>
+                  <td className="px-6 py-4 max-w-xs truncate" title={email.subject}>{email.subject}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{format(new Date(email.date), 'MMM d, yyyy p')}</td>
                 </tr>
               ))}
