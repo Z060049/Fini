@@ -35,7 +35,7 @@ export const CircularProgress = ({ progress, size = 28, strokeWidth = 3 }: Circu
           cy={center}
         />
       </svg>
-      <span className="absolute text-[10px] font-medium text-gray-700">
+      <span className="absolute text-[10px] font-medium text-gray-700 dark:text-white">
         {`${Math.round(progress)}%`}
       </span>
     </div>
