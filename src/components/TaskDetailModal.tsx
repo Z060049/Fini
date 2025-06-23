@@ -5,7 +5,7 @@ import { CircularProgress } from './CircularProgress';
 interface TodoItem {
   id: string;
   text: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
   project: string;
   dueDate: string;
   status: 'To do' | 'Doing' | 'Done';
@@ -37,7 +37,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setText(task.text);
       setProject(task.project);
       setDueDate(task.dueDate);
-      setPriority(task.priority);
+      setPriority(task.priority || 'medium');
       setDescription(task.description || '');
     }
   }, [task]);
