@@ -110,6 +110,16 @@ function App() {
                     </a>
                   </div>
                   <div className="py-1 border-t border-gray-200 dark:border-gray-700">
+                    <a 
+                      href="/terms-of-service.html" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                      Terms of Service
+                    </a>
+                  </div>
+                  <div className="py-1 border-t border-gray-200 dark:border-gray-700">
                     <button
                       onClick={handleSignOut}
                       className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"

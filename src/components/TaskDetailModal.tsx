@@ -60,8 +60,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   const handleSave = () => {
     if (!task) return;
-    const updatedStatus = progress === 100 ? 'Done' : (task.progress === 100 ? 'To do' : task.status);
-    onUpdate(task.id, { text, project, dueDate, priority, progress, status: updatedStatus, description });
+
+    let newStatus: 'To do' | 'Doing' | 'Done' = 'To do';
+    if (progress === 100) {
+      newStatus = 'Done';
+    } else if (progress > 0) {
+      newStatus = 'Doing';
+    }
+
+    onUpdate(task.id, { text, project, dueDate, priority, progress, status: newStatus, description });
     onClose();
   };
 
@@ -84,9 +91,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         {task && (
           <>
             <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
-              <h2 className="text-xl font-semibold dark:text-gray-200">Task Details</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-200">Task Details</h2>
               <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 ml-4">
-                <XMarkIcon className="h-6 w-6 dark:text-gray-400" />
+                <XMarkIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
 
@@ -97,7 +104,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className="w-full p-2 text-base font-medium bg-transparent border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full p-2 text-base font-medium bg-white text-gray-900 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     rows={2}
                   />
                 </div>
@@ -110,7 +117,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     type="text"
                     value={project}
                     onChange={(e) => setProject(e.target.value)}
-                    className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full p-2 border rounded-md bg-white text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                 </div>
               </div>
@@ -122,7 +129,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full p-2 border rounded-md bg-white text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                 </div>
               </div>
@@ -151,9 +158,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     max="100"
                     value={progress}
                     onChange={(e) => setProgress(Math.min(100, Math.max(0, Number(e.target.value))))}
-                    className="w-20 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-20 p-2 border rounded-md bg-white text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
-                  <span className="dark:text-gray-300">%</span>
+                  <span className="text-gray-700 dark:text-gray-300">%</span>
                 </div>
               </div>
               
@@ -163,7 +170,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
-                    className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full p-2 border rounded-md bg-white text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     placeholder="What is this task about?"
                 />
               </div>
