@@ -349,7 +349,7 @@ export default function Todo() {
                           className="flex-1 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white px-2"
                         />
                       ) : (
-                        <span onDoubleClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="flex-1 px-2 text-gray-800 dark:text-gray-200 cursor-pointer">{todo.text}</span>
+                        <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="flex-1 px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.text}</span>
                       )}
                       
                       {editingTodo?.id === todo.id && editingTodo.field === 'project' ? (
@@ -363,7 +363,7 @@ export default function Todo() {
                           className="w-40 shrink-0 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white"
                         />
                       ) : (
-                        <span onDoubleClick={(e) => { e.stopPropagation(); startEditing(todo, 'project'); }} className="w-40 shrink-0 text-gray-600 dark:text-white cursor-pointer">{todo.project}</span>
+                        <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'project'); }} className="w-40 shrink-0 text-gray-600 dark:text-white cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.project}</span>
                       )}
 
                       <span className="w-24 shrink-0 flex justify-center">
