@@ -12,6 +12,7 @@ import { CircularProgress } from './CircularProgress';
 import { useGoogleLogin } from '@react-oauth/google';
 import { gapi } from 'gapi-script';
 import { GmailModal } from './GmailModal';
+import TaskDetailModal from './TaskDetailModal';
 
 interface GmailEmail {
   id: string;
@@ -34,6 +35,7 @@ interface TodoItem {
   progress: number;
   userId?: string;
   timestamp?: any;
+  description?: string;
 }
 
 export default function Todo() {
@@ -47,6 +49,9 @@ export default function Todo() {
   const [isGmailLoading, setIsGmailLoading] = useState(false);
   const [gmailEmails, setGmailEmails] = useState<GmailEmail[]>([]);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [editingTodo, setEditingTodo] = useState<{ id: string, field: 'text' | 'project' } | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [selectedTask, setSelectedTask] = useState<TodoItem | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -246,6 +251,50 @@ export default function Todo() {
     }
   };
 
+  const handleUpdateTodo = async (id: string, updatedData: Partial<TodoItem>) => {
+    if (!user) return;
+    
+    // Optimistic update
+    setTodos(prevTodos => 
+      prevTodos.map(todo => 
+        todo.id === id ? { ...todo, ...updatedData } : todo
+      )
+    );
+
+    const todoDoc = doc(db, 'todos', id);
+    await updateDoc(todoDoc, updatedData);
+  };
+
+  const startEditing = (todo: TodoItem, field: 'text' | 'project') => {
+    setEditingTodo({ id: todo.id, field });
+    setEditingText(field === 'text' ? todo.text : todo.project || '');
+  };
+
+  const cancelEditing = () => {
+    setEditingTodo(null);
+    setEditingText('');
+  };
+
+  const saveEditing = async () => {
+    if (!editingTodo) return;
+    
+    await handleUpdateTodo(editingTodo.id, { [editingTodo.field]: editingText });
+    cancelEditing();
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      saveEditing();
+    } else if (e.key === 'Escape') {
+      cancelEditing();
+    }
+  };
+
+  const openTaskDetail = (task: TodoItem) => {
+    if (editingTodo && editingTodo.id === task.id) return;
+    setSelectedTask(task);
+  };
+
   const renderTodoList = (status: 'To do' | 'Doing' | 'Done') => {
     const filteredTodos = todos.filter(todo => todo.status === status);
     
@@ -277,18 +326,46 @@ export default function Todo() {
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      className={`group flex items-center bg-white dark:bg-gray-800 p-2 rounded-md shadow-sm border text-sm ${snapshot.isDragging ? 'shadow-lg border-blue-400 dark:border-blue-600' : 'border-gray-200 dark:border-gray-700'}`}
+                      {...provided.dragHandleProps}
+                      onClick={() => openTaskDetail(todo)}
+                      className={`group flex items-center bg-white dark:bg-gray-800 p-2 rounded-md shadow-sm border text-sm ${snapshot.isDragging ? 'shadow-lg border-blue-400 dark:border-blue-600' : 'border-gray-200 dark:border-gray-700'} cursor-pointer`}
                     >
                       <span {...provided.dragHandleProps} className="opacity-0 group-hover:opacity-100 cursor-grab px-2">
                         <Bars3Icon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       </span>
-                      <button onClick={() => toggleTodoStatus(todo.id, todo.status)} className="p-1">
+                      <button onClick={(e) => { e.stopPropagation(); toggleTodoStatus(todo.id, todo.status); }} className="p-1">
                         <span className={`h-5 w-5 rounded-full flex items-center justify-center ${todo.status === 'Done' ? 'bg-green-100 dark:bg-green-800' : 'border border-black dark:border-white'}`}>
                           {todo.status === 'Done' && <CheckIcon className="h-4 w-4 text-green-600 dark:text-green-300" />}
                         </span>
                       </button>
-                      <span className="flex-1 px-2 text-gray-800 dark:text-gray-200">{todo.text}</span>
-                      <span className="w-40 shrink-0 text-gray-600 dark:text-white">{todo.project}</span>
+                      {editingTodo?.id === todo.id && editingTodo.field === 'text' ? (
+                        <input
+                          type="text"
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          onBlur={saveEditing}
+                          onKeyDown={handleInputKeyDown}
+                          autoFocus
+                          className="flex-1 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white px-2"
+                        />
+                      ) : (
+                        <span onDoubleClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="flex-1 px-2 text-gray-800 dark:text-gray-200 cursor-pointer">{todo.text}</span>
+                      )}
+                      
+                      {editingTodo?.id === todo.id && editingTodo.field === 'project' ? (
+                        <input
+                          type="text"
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          onBlur={saveEditing}
+                          onKeyDown={handleInputKeyDown}
+                          autoFocus
+                          className="w-40 shrink-0 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white"
+                        />
+                      ) : (
+                        <span onDoubleClick={(e) => { e.stopPropagation(); startEditing(todo, 'project'); }} className="w-40 shrink-0 text-gray-600 dark:text-white cursor-pointer">{todo.project}</span>
+                      )}
+
                       <span className="w-24 shrink-0 flex justify-center">
                         <SourceIcon source={todo.source} />
                       </span>
@@ -302,7 +379,7 @@ export default function Todo() {
                       </span>
                       <span className="w-28 shrink-0 text-center text-gray-600 dark:text-gray-400">{todo.dueDate || 'Not scheduled'}</span>
                       <div className="w-20 shrink-0 flex justify-center space-x-2">
-                        <button onClick={() => deleteTodo(todo.id)} className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-red-500 dark:text-red-400" title="Delete"><TrashIcon className="h-4 w-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); deleteTodo(todo.id); }} className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-red-500 dark:text-red-400" title="Delete"><TrashIcon className="h-4 w-4" /></button>
                       </div>
                     </div>
                   )}
@@ -376,6 +453,12 @@ export default function Todo() {
           selectedEmails={selectedEmails}
           onEmailSelect={handleEmailSelect}
           onConvertToTodo={convertEmailsToTodos}
+        />
+        <TaskDetailModal 
+          isOpen={!!selectedTask}
+          onClose={() => setSelectedTask(null)}
+          task={selectedTask}
+          onUpdate={handleUpdateTodo}
         />
       </div>
     </DragDropContext>
