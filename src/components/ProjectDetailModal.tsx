@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { CircularProgress } from './CircularProgress';
 
-interface TodoItem {
+interface ProjectItem {
   id: string;
   text: string;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
-  project: string;
   dueDate: string;
   status: 'To do' | 'Doing' | 'Done';
   creator: string;
@@ -17,30 +16,28 @@ interface TodoItem {
   description?: string;
 }
 
-interface TaskDetailModalProps {
+interface ProjectDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  task: TodoItem | null;
-  onUpdate: (taskId: string, updatedData: Partial<TodoItem>) => void;
+  project: ProjectItem | null;
+  onUpdate: (projectId: string, updatedData: Partial<ProjectItem>) => void;
 }
 
-const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task, onUpdate }) => {
+const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose, project, onUpdate }) => {
   const [text, setText] = useState('');
-  const [project, setProject] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [description, setDescription] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (task) {
-      setText(task.text);
-      setProject(task.project);
-      setDueDate(task.dueDate);
-      setPriority(task.priority || 'medium');
-      setDescription(task.description || '');
+    if (project) {
+      setText(project.text);
+      setDueDate(project.dueDate);
+      setPriority(project.priority || 'medium');
+      setDescription(project.description || '');
     }
-  }, [task]);
+  }, [project]);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -57,9 +54,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   }, [isOpen, onClose]);
 
   const handleSave = () => {
-    if (!task) return;
-
-    onUpdate(task.id, { text, project, dueDate, priority, description });
+    if (!project) return;
+    onUpdate(project.id, { text, dueDate, priority, description });
     onClose();
   };
 
@@ -79,10 +75,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         ref={modalRef}
         className={`fixed top-0 right-0 h-full w-full max-w-2xl bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform ease-in-out duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        {task && (
+        {project && (
           <>
             <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-200">Task Details</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-200">Project Details</h2>
               <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 ml-4">
                 <XMarkIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
               </button>
@@ -90,7 +86,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
             <div className="p-6 space-y-4">
               <div className="flex items-start">
-                <span className="w-1/4 text-sm text-gray-500 dark:text-gray-400 pt-2">Task Name</span>
+                <span className="w-1/4 text-sm text-gray-500 dark:text-gray-400 pt-2">Project Name</span>
                 <div className="w-3/4">
                   <textarea
                     value={text}
@@ -129,13 +125,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               </div>
               
               <div className="flex flex-col">
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-2">Description</span>
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-2">What is this project about?</span>
                 <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
                     className="w-full p-2 border rounded-md bg-white text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    placeholder="What is this task about?"
+                    placeholder="What is this project about?"
                 />
               </div>
             </div>
@@ -158,4 +154,4 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   );
 };
 
-export default TaskDetailModal; 
+export default ProjectDetailModal; 
