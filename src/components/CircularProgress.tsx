@@ -1,3 +1,5 @@
+import { CheckIcon } from '@heroicons/react/24/solid';
+
 interface CircularProgressProps {
   progress: number;
   size?: number;
@@ -23,7 +25,7 @@ export const CircularProgress = ({ progress, size = 28, strokeWidth = 3 }: Circu
           cy={center}
         />
         <circle
-          className="text-blue-500"
+          className="text-green-500"
           stroke="currentColor"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
@@ -35,8 +37,10 @@ export const CircularProgress = ({ progress, size = 28, strokeWidth = 3 }: Circu
           cy={center}
         />
       </svg>
-      <span className="absolute text-[10px] font-medium text-gray-700 dark:text-white">
-        {`${Math.round(progress)}%`}
+      <span className="absolute">
+        {progress === 100 && (
+          <CheckIcon className="h-4 w-4 text-green-500" />
+        )}
       </span>
     </div>
   );
