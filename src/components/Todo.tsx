@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckIcon, PencilIcon, TrashIcon, Bars3Icon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PencilIcon, TrashIcon, Bars3Icon, PencilSquareIcon, DocumentDuplicateIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -321,13 +321,12 @@ export default function Todo() {
         {filteredTodos.length > 0 && (
           <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase px-4 pb-2 border-b border-gray-200 dark:border-gray-700">
             <span className="w-12 shrink-0"></span> {/* Spacer for handle + checkbox */}
-            <span className="flex-1 px-2">Task</span>
-            <span className="w-40 shrink-0">Project</span>
-            <span className="w-24 shrink-0 text-center">Source</span>
-            <span className="w-28 shrink-0 text-center">Priority</span>
+            <span className="flex-1 px-2 text-left">Task</span>
+            <span className="w-40 shrink-0 px-2 text-left">Project</span>
+            <span className="w-24 shrink-0 px-2 text-left">Source</span>
+            <span className="w-28 shrink-0 px-2 text-left">Priority</span>
             <span className="w-24 shrink-0 text-center">Progress</span>
-            <span className="w-28 shrink-0 text-center">Due Date</span>
-            <span className="w-20 shrink-0 text-center">Actions</span>
+            <span className="w-28 shrink-0 px-2 text-left">Due Date</span>
           </div>
         )}
         <Droppable droppableId={status}>
@@ -348,25 +347,43 @@ export default function Todo() {
                       <span {...provided.dragHandleProps} className="cursor-grab px-2 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400">
                         <Bars3Icon className="h-4 w-4" />
                       </span>
-                      <div onClick={(e) => { e.stopPropagation(); openTaskDetail(todo); }} className="flex flex-grow items-center cursor-pointer">
+                      <div className="flex flex-grow items-center">
                         <button onClick={(e) => { e.stopPropagation(); toggleTodoStatus(todo.id, todo.status); }} className="p-1">
                           <span className={`h-5 w-5 rounded-full flex items-center justify-center ${todo.status === 'Done' ? 'bg-green-100 dark:bg-green-800' : 'border border-black dark:border-white'}`}>
                             {todo.status === 'Done' && <CheckIcon className="h-4 w-4 text-green-600 dark:text-green-300" />}
                           </span>
                         </button>
-                        {editingTodo?.id === todo.id && editingTodo.field === 'text' ? (
-                          <input
-                            type="text"
-                            value={editingText}
-                            onChange={(e) => setEditingText(e.target.value)}
-                            onBlur={saveEditing}
-                            onKeyDown={handleInputKeyDown}
-                            autoFocus
-                            className="flex-1 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white px-2"
-                          />
-                        ) : (
-                          <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="flex-1 px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.text}</span>
-                        )}
+
+                        <div className="flex-1 flex items-center justify-between pr-4">
+                          {editingTodo?.id === todo.id && editingTodo.field === 'text' ? (
+                            <input
+                              type="text"
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              onBlur={saveEditing}
+                              onKeyDown={handleInputKeyDown}
+                              autoFocus
+                              className="flex-1 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white px-2"
+                            />
+                          ) : (
+                            <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.text}</span>
+                          )}
+                           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); openTaskDetail(todo); }}
+                                    className="flex items-center space-x-1 px-2 py-1 border rounded-md text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                                >
+                                    <DocumentDuplicateIcon className="h-3 w-3" />
+                                    <span>Open</span>
+                                </button>
+                                <button className="p-1 border rounded-md bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600">
+                                    <PlusIcon className="h-4 w-4" />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); deleteTodo(todo.id); }} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:text-red-400" title="Delete">
+                                    <TrashIcon className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
                         
                         {editingTodo?.id === todo.id && editingTodo.field === 'project' ? (
                           <input
@@ -376,16 +393,16 @@ export default function Todo() {
                             onBlur={saveEditing}
                             onKeyDown={handleInputKeyDown}
                             autoFocus
-                            className="w-40 shrink-0 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white"
+                            className="w-40 shrink-0 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white px-2"
                           />
                         ) : (
-                          <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'project'); }} className="w-40 shrink-0 text-gray-600 dark:text-white cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.project}</span>
+                          <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'project'); }} className="w-40 shrink-0 px-2 text-gray-600 dark:text-white cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.project}</span>
                         )}
 
-                        <span className="w-24 shrink-0 flex justify-center">
+                        <span className="w-24 shrink-0 px-2 flex justify-start">
                           <SourceIcon source={todo.source} />
                         </span>
-                        <span className="w-28 shrink-0 text-center">
+                        <span className="w-28 shrink-0 px-2 text-left">
                           <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(todo.priority)}`}>
                             {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}
                           </span>
@@ -393,10 +410,7 @@ export default function Todo() {
                         <span className="w-24 shrink-0 flex justify-center">
                           <CircularProgress progress={todo.progress || 0} size={32} />
                         </span>
-                        <span className="w-28 shrink-0 text-center text-gray-600 dark:text-gray-400">{todo.dueDate || 'Not scheduled'}</span>
-                        <div className="w-20 shrink-0 flex justify-center space-x-2">
-                          <button onClick={(e) => { e.stopPropagation(); deleteTodo(todo.id); }} className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-red-500 dark:text-red-400" title="Delete"><TrashIcon className="h-4 w-4" /></button>
-                        </div>
+                        <span className="w-28 shrink-0 px-2 text-left text-gray-600 dark:text-gray-400">{todo.dueDate || 'Not scheduled'}</span>
                       </div>
                     </div>
                   )}

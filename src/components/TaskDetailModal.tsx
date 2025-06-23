@@ -29,7 +29,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [project, setProject] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
-  const [progress, setProgress] = useState(0);
   const [description, setDescription] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +38,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setProject(task.project);
       setDueDate(task.dueDate);
       setPriority(task.priority);
-      setProgress(task.progress);
       setDescription(task.description || '');
     }
   }, [task]);
@@ -61,14 +59,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const handleSave = () => {
     if (!task) return;
 
-    let newStatus: 'To do' | 'Doing' | 'Done' = 'To do';
-    if (progress === 100) {
-      newStatus = 'Done';
-    } else if (progress > 0) {
-      newStatus = 'Doing';
-    }
-
-    onUpdate(task.id, { text, project, dueDate, priority, progress, status: newStatus, description });
+    onUpdate(task.id, { text, project, dueDate, priority, description });
     onClose();
   };
 
@@ -146,21 +137,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       {p}
                     </button>
                   ))}
-                </div>
-              </div>
-              
-              <div className="flex items-center">
-                <span className="w-1/4 text-sm font-medium text-gray-500 dark:text-gray-300">Progress</span>
-                <div className="w-3/4 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={progress}
-                    onChange={(e) => setProgress(Math.min(100, Math.max(0, Number(e.target.value))))}
-                    className="w-20 p-2 border rounded-md bg-white text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                  <span className="text-gray-700 dark:text-gray-300">%</span>
                 </div>
               </div>
               
