@@ -302,7 +302,6 @@ export default function Todo() {
                       </span>
                       <span className="w-28 shrink-0 text-center text-gray-600 dark:text-gray-400">{todo.dueDate || 'Not scheduled'}</span>
                       <div className="w-20 shrink-0 flex justify-center space-x-2">
-                        <button className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-blue-500 dark:text-blue-400" title="Edit"><PencilIcon className="h-4 w-4" /></button>
                         <button onClick={() => deleteTodo(todo.id)} className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-red-500 dark:text-red-400" title="Delete"><TrashIcon className="h-4 w-4" /></button>
                       </div>
                     </div>
@@ -348,11 +347,11 @@ export default function Todo() {
                     <img src={GmailIconSrc} alt="Gmail" className="h-5 w-5" />
                     <span>Gmail</span>
                   </button>
-                  <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                  <button disabled className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md transition-colors text-sm dark:bg-gray-700 dark:text-gray-200 opacity-50 cursor-not-allowed">
                     <img src={SlackIconSrc} alt="Slack" className="h-5 w-5" />
                     <span>Slack</span>
                   </button>
-                  <button className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                  <button disabled className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md transition-colors text-sm dark:bg-gray-700 dark:text-gray-200 opacity-50 cursor-not-allowed">
                     <img src={ZoomIconSrc} alt="Zoom" className="h-5 w-5" />
                     <span>Zoom</span>
                   </button>
