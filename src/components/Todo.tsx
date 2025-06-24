@@ -39,11 +39,13 @@ interface TodoItem {
   description?: string;
   parentId?: string | null;
   order?: number;
+  isDefault?: boolean;
 }
 
 export default function Todo() {
   const [user] = useAuthState(auth);
   const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [todosLoaded, setTodosLoaded] = useState(false);
   const [newTodo, setNewTodo] = useState('');
   const [newProject, setNewProject] = useState('');
   const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
@@ -63,6 +65,7 @@ export default function Todo() {
   useEffect(() => {
     if (!user) {
       setTodos([]);
+      setTodosLoaded(false);
       return;
     }
 
@@ -73,6 +76,9 @@ export default function Todo() {
         todosData.push({ ...doc.data(), id: doc.id } as TodoItem);
       });
       setTodos(todosData);
+      setTodosLoaded(true);
+      (window as any)._debugTodos = todosData;
+      console.log('Todos from Firestore:', todosData);
     });
 
     return () => unsubscribe();
@@ -213,26 +219,40 @@ export default function Todo() {
   };
 
   const handleAddSubTask = async (parentTask: TodoItem) => {
+    console.log('Add subtask button clicked');
+    console.log('user:', user);
+    console.log('parentTask:', parentTask);
     if (!user) return;
-    const subtasks = todos.filter(t => t.parentId === parentTask.id);
-    await addDoc(collection(db, 'todos'), {
-      text: 'task',
-      project: '',
-      dueDate: parentTask.dueDate,
-      status: parentTask.status,
-      creator: user.displayName || user.email || 'Unknown',
-      stakeholder: user.displayName || user.email || 'Unknown',
-      created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-      userId: user.uid,
-      timestamp: new Date(),
-      source: 'manual',
-      progress: 0,
-      parentId: parentTask.id,
-      order: getNextOrder(subtasks),
-    });
+    try {
+      const subtasks = todos.filter(t => t.parentId === parentTask.id);
+      console.log('Adding subtask...');
+      await addDoc(collection(db, 'todos'), {
+        text: 'task',
+        project: parentTask.text,
+        dueDate: parentTask.dueDate,
+        status: parentTask.status,
+        creator: user.displayName || user.email || 'Unknown',
+        stakeholder: user.displayName || user.email || 'Unknown',
+        created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+        userId: user.uid,
+        timestamp: new Date(),
+        source: 'manual',
+        progress: 0,
+        parentId: parentTask.id,
+        order: getNextOrder(subtasks),
+      });
+      // Auto-expand after adding
+      setCollapsedTasks(prev => prev.filter(id => id !== parentTask.id));
+      console.log('Subtask added successfully');
+    } catch (err) {
+      console.error('Failed to add subtask:', err);
+      alert('Failed to add subtask: ' + (err instanceof Error ? err.message : String(err)));
+    }
   };
 
   const deleteTodo = async (id: string) => {
+    const todo = todos.find(t => t.id === id);
+    if (todo?.isDefault) return; // Prevent deleting default project
     await deleteDoc(doc(db, 'todos', id));
   };
   
@@ -253,20 +273,16 @@ export default function Todo() {
   };
 
   const onDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+    const { destination, source, draggableId, type } = result;
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
     const draggedTodo = todos.find(todo => todo.id === draggableId);
     if (!draggedTodo) return;
 
-    // Helper type guard for valid statuses
-    const isValidStatus = (status: any): status is 'To do' | 'Doing' | 'Done' => ['To do', 'Doing', 'Done'].includes(status);
-
-    // If dragging a project (top-level)
-    if (!draggedTodo.parentId) {
-      // Get all projects in the destination status
-      const projectsInStatus = todos.filter(t => !t.parentId && isValidStatus(t.status) && t.status === (destination.droppableId as 'To do' | 'Doing' | 'Done'));
+    if (type === 'PROJECT') {
+      // Dragging a project between status columns
+      const projectsInStatus = todos.filter(t => !t.parentId && t.status === destination.droppableId);
       const reordered = [...projectsInStatus];
       const fromIndex = reordered.findIndex(t => t.id === draggedTodo.id);
       if (fromIndex !== -1) reordered.splice(fromIndex, 1);
@@ -274,6 +290,7 @@ export default function Todo() {
       reordered.forEach((proj, idx) => {
         handleUpdateTodo(proj.id, { order: idx, status: destination.droppableId as 'To do' | 'Doing' | 'Done' });
         if (proj.id === draggedTodo.id) {
+          // Move all subtasks to new status
           const subtasks = todos.filter(todo => todo.parentId === proj.id);
           subtasks.forEach(subtask => {
             handleUpdateTodo(subtask.id, { status: destination.droppableId as 'To do' | 'Doing' | 'Done' });
@@ -283,19 +300,19 @@ export default function Todo() {
       return;
     }
 
-    // If dragging a task (subtask)
-    // Use destination.droppableId as the new parentId
-    const newProject = todos.find(todo => todo.id === destination.droppableId && !todo.parentId);
-    if (!newProject) return;
-    // Get all tasks for the new project
-    const tasksInProject = todos.filter(t => t.parentId === newProject.id);
-    const reordered = [...tasksInProject];
-    const fromIndex = reordered.findIndex(t => t.id === draggedTodo.id);
-    if (fromIndex !== -1) reordered.splice(fromIndex, 1);
-    reordered.splice(destination.index, 0, draggedTodo);
-    reordered.forEach((task, idx) => {
-      handleUpdateTodo(task.id, { order: idx, parentId: newProject.id, status: newProject.status as 'To do' | 'Doing' | 'Done' });
-    });
+    if (type === 'SUBTASK') {
+      // Dragging a subtask between projects
+      const newProject = todos.find(todo => todo.id === destination.droppableId && !todo.parentId);
+      if (!newProject) return;
+      const tasksInProject = todos.filter(t => t.parentId === newProject.id);
+      const reordered = [...tasksInProject];
+      const fromIndex = reordered.findIndex(t => t.id === draggedTodo.id);
+      if (fromIndex !== -1) reordered.splice(fromIndex, 1);
+      reordered.splice(destination.index, 0, draggedTodo);
+      reordered.forEach((task, idx) => {
+        handleUpdateTodo(task.id, { order: idx, parentId: newProject.id, status: newProject.status as 'To do' | 'Doing' | 'Done' });
+      });
+    }
   };
 
   const getPriorityStyle = (priority?: string) => {
@@ -342,6 +359,7 @@ export default function Todo() {
   };
 
   const startEditing = (todo: TodoItem, field: 'text' | 'project') => {
+    if (todo.isDefault) return; // Prevent editing default project
     setEditingTodo({ id: todo.id, field });
     setEditingText(field === 'text' ? todo.text : todo.project || '');
   };
@@ -386,185 +404,194 @@ export default function Todo() {
       return acc;
     }, {} as Record<string, TodoItem[]>);
 
+    // Only show user-created top-level projects
     const topLevelTodos = todos.filter(todo => todo.status === status && !todo.parentId)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || ((a.timestamp?.toDate?.() || 0) - (b.timestamp?.toDate?.() || 0)));
 
     return (
       <div key={status}>
         <h2 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">{status}</h2>
-        {topLevelTodos.length > 0 && (
-          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase px-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-            <span className="w-12 shrink-0"></span> {/* Spacer for handle + checkbox */}
-            <span className="flex-1 px-2 text-left">Project</span>
-            <span className="w-24 shrink-0 px-2 text-left">Source</span>
-            <span className="w-28 shrink-0 px-2 text-left">Priority</span>
-            <span className="w-24 shrink-0 text-center">Progress</span>
-            <span className="w-28 shrink-0 px-2 text-left">Due Date</span>
-          </div>
-        )}
-        {topLevelTodos.map((parent, projectIndex) => {
-          const isCollapsed = collapsedTasks.includes(parent.id);
-          const subtasks = subtasksByParentId[parent.id] || [];
-          subtasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || ((a.timestamp?.toDate?.() || 0) - (b.timestamp?.toDate?.() || 0)));
-          // Helper to calculate progress for main tasks with subtasks
-          const getSubtaskProgress = (parentId: string) => {
-            const subtasks = subtasksByParentId[parentId] || [];
-            if (subtasks.length === 0) return 0;
-            const completed = subtasks.filter(st => st.status === 'Done').length;
-            return Math.round((completed / subtasks.length) * 100);
-          };
-          return (
-            <Droppable droppableId={parent.id} key={parent.id}>
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`mb-4 bg-white dark:bg-gray-800 rounded-md shadow-sm border ${snapshot.isDraggingOver ? 'border-blue-400 dark:border-blue-600' : 'border-gray-200 dark:border-gray-700'}`}
-                >
-                  {/* Project row (Draggable) */}
+        <Droppable droppableId={status} type="PROJECT">
+          {(provided, snapshot) => (
+            <div ref={provided.innerRef} {...provided.droppableProps}>
+              {topLevelTodos.length > 0 && (
+                <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase px-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="w-12 shrink-0"></span> {/* Spacer for handle + checkbox */}
+                  <span className="flex-1 px-2 text-left">Project</span>
+                  <span className="w-24 shrink-0 px-2 text-left">Source</span>
+                  <span className="w-28 shrink-0 px-2 text-left">Priority</span>
+                  <span className="w-24 shrink-0 text-center">Progress</span>
+                  <span className="w-28 shrink-0 px-2 text-left">Due Date</span>
+                </div>
+              )}
+              {/* Draggable projects */}
+              {topLevelTodos.map((parent, projectIndex) => {
+                const isCollapsed = collapsedTasks.includes(parent.id);
+                const subtasks = subtasksByParentId[parent.id] || [];
+                subtasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || ((a.timestamp?.toDate?.() || 0) - (b.timestamp?.toDate?.() || 0)));
+                // Helper to calculate progress for main tasks with subtasks
+                const getSubtaskProgress = (parentId: string) => {
+                  const subtasks = subtasksByParentId[parentId] || [];
+                  if (subtasks.length === 0) return 0;
+                  const completed = subtasks.filter(st => st.status === 'Done').length;
+                  return Math.round((completed / subtasks.length) * 100);
+                };
+                return (
                   <Draggable key={parent.id} draggableId={parent.id} index={projectIndex}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className={`group flex items-center p-2 rounded-md text-sm ${snapshot.isDragging ? 'shadow-lg border-blue-400 dark:border-blue-600' : ''}`}
+                        className={`mb-4 bg-white dark:bg-gray-800 rounded-md shadow-sm border ${snapshot.isDragging ? 'border-blue-400 dark:border-blue-600' : 'border-gray-200 dark:border-gray-700'}`}
                       >
-                        {/* Handle */}
-                        <span {...provided.dragHandleProps} className="w-12 shrink-0 cursor-grab px-2 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400">
-                          <Bars3Icon className="h-4 w-4" />
-                        </span>
-                        {/* Name */}
-                        <div className="flex-1 flex items-center">
-                          {subtasks.length > 0 ? (
-                            <button onClick={() => toggleCollapse(parent.id)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-                              {isCollapsed ? <ChevronRightIcon className="h-4 w-4 text-gray-500" /> : <ChevronDownIcon className="h-4 w-4 text-gray-500" />}
-                            </button>
-                          ) : (
-                            <span className="w-6 block"></span>
-                          )}
-                          <span onClick={(e) => { e.stopPropagation(); startEditing(parent, 'text'); }} className="px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{parent.text}</span>
-                        </div>
-                        {/* Actions */}
-                        <div className="w-32 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openProjectDetail(parent);
-                            }}
-                            className="flex items-center space-x-1 px-2 py-1 border rounded-md text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                          >
-                            <DocumentDuplicateIcon className="h-3 w-3" />
-                            <span>Open</span>
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); handleAddSubTask(parent); }} className="p-1 border rounded-md bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600">
-                            <PlusIcon className="h-4 w-4" />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); deleteTodo(parent.id); }} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:text-red-400" title="Delete">
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                        {/* Source */}
-                        <span className="w-24 shrink-0 px-2 flex justify-center items-center">
-                          <SourceIcon source={parent.source} />
-                        </span>
-                        {/* Priority */}
-                        <span className="w-28 shrink-0 px-2 flex justify-center items-center">
-                          {parent.priority && (
-                            <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(parent.priority)}`}> 
-                              {parent.priority.charAt(0).toUpperCase() + parent.priority.slice(1)}
-                            </span>
-                          )}
-                        </span>
-                        {/* Progress */}
-                        <span className="w-24 shrink-0 flex justify-center items-center">
-                          {subtasks.length > 0 ? (
-                            <CircularProgress progress={getSubtaskProgress(parent.id)} size={32} />
-                          ) : null}
-                        </span>
-                        {/* Due Date */}
-                        <span className="w-28 shrink-0 px-2 flex items-center text-left text-gray-600 dark:text-gray-400">{parent.dueDate || 'Not scheduled'}</span>
-                      </div>
-                    )}
-                  </Draggable>
-                  {/* Subtasks (Draggables) */}
-                  {!isCollapsed && subtasks.map((todo, index) => (
-                    <Draggable key={todo.id} draggableId={todo.id} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`group flex items-center p-2 rounded-md text-sm ${snapshot.isDragging ? 'shadow-lg border-blue-400 dark:border-blue-600' : ''}`}
-                        >
+                        {/* Project row */}
+                        <div className={`group flex items-center p-2 rounded-md text-sm`}>
                           {/* Handle */}
                           <span {...provided.dragHandleProps} className="w-12 shrink-0 cursor-grab px-2 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400">
                             <Bars3Icon className="h-4 w-4" />
                           </span>
-                          {/* Name (with indent for tasks) */}
-                          <div className="flex-1 flex items-center pl-6">
-                            <button onClick={(e) => { e.stopPropagation(); toggleTodoStatus(todo.id, todo.status); }} className="p-0 align-middle">
-                              <span className={`h-4 w-4 rounded-full flex items-center justify-center ${todo.status === 'Done' ? 'bg-green-100 dark:bg-green-800' : 'border border-black dark:border-white'}`} style={{ minWidth: '1rem', minHeight: '1rem' }}>
-                                {todo.status === 'Done' && <CheckIcon className="h-3 w-3 text-green-600 dark:text-green-300" />}
-                              </span>
-                            </button>
-                            {editingTodo?.id === todo.id && editingTodo.field === 'text' ? (
-                              <input
-                                type="text"
-                                value={editingText}
-                                onChange={(e) => setEditingText(e.target.value)}
-                                onBlur={saveEditing}
-                                onKeyDown={handleInputKeyDown}
-                                autoFocus
-                                className="flex-1 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white ml-2"
-                              />
+                          {/* Name */}
+                          <div className="flex-1 flex items-center">
+                            {subtasks.length > 0 ? (
+                              <button onClick={() => toggleCollapse(parent.id)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                                {isCollapsed ? <ChevronRightIcon className="h-4 w-4 text-gray-500" /> : <ChevronDownIcon className="h-4 w-4 text-gray-500" />}
+                              </button>
                             ) : (
-                              <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="ml-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.text}</span>
+                              <span className="w-6 block"></span>
                             )}
+                            <span onClick={(e) => { e.stopPropagation(); startEditing(parent, 'text'); }} className="px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{parent.text}</span>
                           </div>
                           {/* Actions */}
                           <div className="w-32 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                openTaskDetail(todo);
+                                openProjectDetail(parent);
                               }}
                               className="flex items-center space-x-1 px-2 py-1 border rounded-md text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                             >
                               <DocumentDuplicateIcon className="h-3 w-3" />
                               <span>Open</span>
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); deleteTodo(todo.id); }} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:text-red-400" title="Delete">
+                            <button onClick={(e) => { e.stopPropagation(); handleAddSubTask(parent); }} className="p-1 border rounded-md bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600">
+                              <PlusIcon className="h-4 w-4" />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); deleteTodo(parent.id); }} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:text-red-400" title="Delete">
                               <TrashIcon className="h-4 w-4" />
                             </button>
                           </div>
                           {/* Source */}
                           <span className="w-24 shrink-0 px-2 flex justify-center items-center">
-                            <SourceIcon source={todo.source} />
+                            <SourceIcon source={parent.source} />
                           </span>
                           {/* Priority */}
                           <span className="w-28 shrink-0 px-2 flex justify-center items-center">
-                            {todo.priority && (
-                              <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(todo.priority)}`}> 
-                                {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}
+                            {parent.priority && (
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(parent.priority)}`}> 
+                                {parent.priority.charAt(0).toUpperCase() + parent.priority.slice(1)}
                               </span>
                             )}
                           </span>
-                          {/* Progress (empty for tasks) */}
-                          <span className="w-24 shrink-0 flex justify-center items-center"></span>
+                          {/* Progress */}
+                          <span className="w-24 shrink-0 flex justify-center items-center">
+                            {subtasks.length > 0 ? (
+                              <CircularProgress progress={getSubtaskProgress(parent.id)} size={32} />
+                            ) : null}
+                          </span>
                           {/* Due Date */}
-                          <span className="w-28 shrink-0 px-2 flex items-center text-left text-gray-600 dark:text-gray-400">{todo.dueDate || 'Not scheduled'}</span>
+                          <span className="w-28 shrink-0 px-2 flex items-center text-left text-gray-600 dark:text-gray-400">{parent.dueDate || 'Not scheduled'}</span>
                         </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
+                        {/* Subtasks (Draggables) */}
+                        {!isCollapsed && (
+                          <Droppable droppableId={parent.id} type="SUBTASK">
+                            {(provided, snapshot) => (
+                              <div ref={provided.innerRef} {...provided.droppableProps}>
+                                {subtasks.map((todo, index) => (
+                                  <Draggable key={todo.id} draggableId={todo.id} index={index}>
+                                    {(provided, snapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        className={`group flex items-center p-2 rounded-md text-sm ${snapshot.isDragging ? 'shadow-lg border-blue-400 dark:border-blue-600' : ''}`}
+                                      >
+                                        {/* Handle */}
+                                        <span {...provided.dragHandleProps} className="w-12 shrink-0 cursor-grab px-2 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400">
+                                          <Bars3Icon className="h-4 w-4" />
+                                        </span>
+                                        {/* Name (with indent for tasks) */}
+                                        <div className="flex-1 flex items-center pl-6">
+                                          <button onClick={(e) => { e.stopPropagation(); toggleTodoStatus(todo.id, todo.status); }} className="p-0 align-middle">
+                                            <span className={`h-4 w-4 rounded-full flex items-center justify-center ${todo.status === 'Done' ? 'bg-green-100 dark:bg-green-800' : 'border border-black dark:border-white'}`} style={{ minWidth: '1rem', minHeight: '1rem' }}>
+                                              {todo.status === 'Done' && <CheckIcon className="h-3 w-3 text-green-600 dark:text-green-300" />}
+                                            </span>
+                                          </button>
+                                          {editingTodo?.id === todo.id && editingTodo.field === 'text' ? (
+                                            <input
+                                              type="text"
+                                              value={editingText}
+                                              onChange={(e) => setEditingText(e.target.value)}
+                                              onBlur={saveEditing}
+                                              onKeyDown={handleInputKeyDown}
+                                              autoFocus
+                                              className="flex-1 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white ml-2"
+                                            />
+                                          ) : (
+                                            <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="ml-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.text}</span>
+                                          )}
+                                        </div>
+                                        {/* Actions */}
+                                        <div className="w-32 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openTaskDetail(todo);
+                                            }}
+                                            className="flex items-center space-x-1 px-2 py-1 border rounded-md text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                                          >
+                                            <DocumentDuplicateIcon className="h-3 w-3" />
+                                            <span>Open</span>
+                                          </button>
+                                          <button onClick={(e) => { e.stopPropagation(); deleteTodo(todo.id); }} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:text-red-400" title="Delete">
+                                            <TrashIcon className="h-4 w-4" />
+                                          </button>
+                                        </div>
+                                        {/* Source */}
+                                        <span className="w-24 shrink-0 px-2 flex justify-center items-center">
+                                          <SourceIcon source={todo.source} />
+                                        </span>
+                                        {/* Priority */}
+                                        <span className="w-28 shrink-0 px-2 flex justify-center items-center">
+                                          {todo.priority && (
+                                            <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(todo.priority)}`}> 
+                                              {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}
+                                            </span>
+                                          )}
+                                        </span>
+                                        {/* Progress (empty for tasks) */}
+                                        <span className="w-24 shrink-0 flex justify-center items-center"></span>
+                                        {/* Due Date */}
+                                        <span className="w-28 shrink-0 px-2 flex items-center text-left text-gray-600 dark:text-gray-400">{todo.dueDate || 'Not scheduled'}</span>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        )}
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+              {provided.placeholder}
+              {topLevelTodos.length === 0 && (
+                <div className="text-center text-gray-500 dark:text-gray-400 py-3 text-sm">No tasks in this section.</div>
               )}
-            </Droppable>
-          );
-        })}
-        {topLevelTodos.length === 0 && (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-3 text-sm">No tasks in this section.</div>
-        )}
+            </div>
+          )}
+        </Droppable>
       </div>
     );
   };

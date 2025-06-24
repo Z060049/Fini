@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 \n# Local environment variables\n.env.local
+
+# Ignore Google Cloud credentials
+serviceAccountKey.json
