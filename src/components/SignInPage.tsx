@@ -1,5 +1,5 @@
 import React from 'react';
-import CompanyLogo from '../assets/img/task-fini-logo.png';
+import CompanyLogo from '../assets/img/task-fini-logo.svg';
 
 interface SignInPageProps {
   onGoogleSignIn: () => void;
@@ -40,7 +40,7 @@ export default function SignInPage({ onGoogleSignIn }: SignInPageProps) {
         </button>
         {/* Privacy/Terms */}
         <div className="text-center text-gray-400 text-xs mt-4">
-          By signing up, I agree to the <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" className="text-gray-500 font-medium underline">Privacy Policy</a> and <a href="/terms-of-service.html" target="_blank" rel="noopener noreferrer" className="text-gray-500 font-medium underline">Terms of Service</a>.
+          By signing up, I agree to the <a href="https://www.task-fini.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-gray-500 font-medium underline">Privacy Policy</a> and <a href="https://www.task-fini.com/terms-of-service.html" target="_blank" rel="noopener noreferrer" className="text-gray-500 font-medium underline">Terms of Service</a>.
         </div>
       </div>
     </div>
