@@ -152,26 +152,68 @@ export default function Todo() {
   const convertEmailsToTodos = async () => {
     if (!user) return;
     const emailsToConvert = gmailEmails.filter(email => selectedEmails.includes(email.id));
-    
+    if (emailsToConvert.length === 0) return;
+
+    // 1. Find Gmail project in To do or Doing
+    let gmailProject = todos.find(
+      t => !t.parentId && t.text === 'Gmail' && (t.status === 'To do' || t.status === 'Doing')
+    );
+
+    // 2. If not found, check in Done
+    if (!gmailProject) {
+      const doneGmailProject = todos.find(
+        t => !t.parentId && t.text === 'Gmail' && t.status === 'Done'
+      );
+      if (doneGmailProject) {
+        // Move to Doing
+        await handleUpdateTodo(doneGmailProject.id, { status: 'Doing' });
+        gmailProject = { ...doneGmailProject, status: 'Doing' };
+      }
+    }
+
+    // 3. If still not found, create new in To do
+    if (!gmailProject) {
+      const topLevelProjects = todos.filter(t => !t.parentId);
+      const newProjectRef = await addDoc(collection(db, 'todos'), {
+        text: 'Gmail',
+        priority: 'medium',
+        project: 'Gmail',
+        dueDate: '',
+        status: 'To do',
+        creator: user.displayName || user.email || 'Unknown',
+        stakeholder: user.displayName || user.email || 'Unknown',
+        created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+        userId: user.uid,
+        timestamp: new Date(),
+        source: 'gmail',
+        progress: 0,
+        order: getNextOrder(topLevelProjects),
+      });
+      gmailProject = { id: newProjectRef.id, text: 'Gmail', status: 'To do' } as TodoItem;
+    }
+
+    // Helper to get sender name
     const getSenderName = (fromHeader: string) => {
       const match = fromHeader.match(/(.*)<.*>/);
       return match ? match[1].trim().replace(/"/g, '') : fromHeader;
     };
 
+    // Find current subtasks for ordering
+    const subtasks = todos.filter(t => t.parentId === gmailProject.id);
+    let order = getNextOrder(subtasks);
+
     for (const email of emailsToConvert) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-
       const senderName = getSenderName(email.from);
       const truncatedSender = senderName.length > 10 ? `${senderName.substring(0, 10)}...` : senderName;
       const truncatedSubject = email.subject.length > 20 ? `${email.subject.substring(0, 20)}...` : email.subject;
-
       await addDoc(collection(db, 'todos'), {
         text: `reply ${truncatedSender} about ${truncatedSubject}`,
         priority: 'medium',
-        project: 'Inbox',
+        project: 'Gmail',
         dueDate: tomorrow.toISOString().split('T')[0],
-        status: 'To do',
+        status: gmailProject.status || 'To do',
         creator: user.displayName || user.email || 'Unknown',
         stakeholder: senderName,
         created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
@@ -179,6 +221,8 @@ export default function Todo() {
         timestamp: new Date(),
         source: 'gmail',
         progress: 0,
+        parentId: gmailProject.id,
+        order: order++,
       });
     }
 
@@ -310,7 +354,7 @@ export default function Todo() {
       if (fromIndex !== -1) reordered.splice(fromIndex, 1);
       reordered.splice(destination.index, 0, draggedTodo);
       reordered.forEach((task, idx) => {
-        handleUpdateTodo(task.id, { order: idx, parentId: newProject.id, status: newProject.status as 'To do' | 'Doing' | 'Done' });
+        handleUpdateTodo(task.id, { order: idx, parentId: newProject.id });
       });
     }
   };

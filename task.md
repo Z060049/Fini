@@ -1,45 +1,64 @@
-# Feature: Gmail Integration for Auto To-Do Creation
+Objective
+	•	Build a SaaS tool for users to manage everyday to-do lists.
+	•	Support manual task creation and importing tasks from Gmail, Slack, and Zoom.
 
-## Objective
-Enable users to connect their Gmail account and automatically generate to-do list items based on recent emails.
+Basic Features
+	•	Allow users to create to-do items
+	•	Assign a priority (low, medium, high, urgent) to each task
+	•	Assign each task to a project
+	•	Allow users to set an action/due date
+	•	Save tasks in real-time as the user types
 
----
+Advanced Features
 
-## User Flow
+Gmail Integration
+	•	Authenticate with Google OAuth
+	•	Fetch user’s recent Gmail messages
+	•	Parse emails into task format (subject + sender)
+	•	Let users select which emails to convert into tasks
 
-1. **Click Gmail Button**
-   - User clicks the "Gmail" button on the interface.
+Slack Integration
+	•	Connect to user’s Slack account (placeholder for future release)
+	•	Read relevant messages from selected channels or DMs
+	•	Generate tasks based on message content
 
-2. **OAuth Authentication**
-   - App initiates OAuth flow to authenticate and request read access to the user's Gmail inbox.
+Zoom Integration
+	•	Support importing tasks from meeting transcripts (future)
 
-3. **Email Fetching**
-   - After successful authentication, app fetches emails from the user's **primary inbox** for the **past 3 days**.
+Reference UI/UX
+	•	Follow design patterns from Asana or Notion
+	•	Refer to internal screenshots for layout guidance
 
-4. **To-Do Generation**
-   - For each fetched email, app creates a new to-do item with the following format:
-     - **Description**: `Reply email sender`
-     - **Source**: `Gmail`
-     - **Due Date**: `Tomorrow`
+Style
 
----
+Element	Style
+Aesthetic	Clean, flat, minimalist
+Typography	Clear hierarchy, modern sans-serif
+Color	Neutral with subtle accents
+Animation	Subtle and smooth
+Layout	Block-based, modular
+UX Focus	Calm, focused workflows, minimal distraction
 
-## Technical Tasks
+Tech Stack (Frontend)
+	•	React
+	•	TypeScript
+	•	Tailwind CSS
+	•	Firebase (for authentication and real-time database)
 
-- [ ] Implement Gmail OAuth2 flow
-- [ ] Fetch emails from `Primary` inbox using Gmail API (past 3 days)
-- [ ] Parse sender info from each email
-- [ ] Generate to-do list items from parsed data
-- [ ] Save generated tasks to user’s task list
+Platform
+	•	Web and Mobile
 
----
-
-## Data Structure: To-Do Item
-
-```ts
-interface TodoItem {
-  id: string;
-  description: string; // e.g. "Reply email sender"
-  source: 'Gmail';
-  dueDate: Date; // default to tomorrow
-}
+Tasks
+	•	Set up project structure with React, Vite, and Tailwind CSS
+	•	Build core to-do list UI with editable text fields
+	•	Enable assigning priority, project, and due date to each task
+	•	Integrate Firebase for storing tasks and real-time syncing
+	•	Add “Add Project” and “Add Subtask” buttons
+	•	Implement drag-and-drop reordering using react-beautiful-dnd
+	•	Enable Google OAuth login using @react-oauth/google
+	•	Connect to Gmail API and fetch recent messages
+	•	Parse Gmail messages into task format (e.g. “Reply John about project X”)
+	•	Display Gmail messages and allow user to select which to import
+	•	Create reusable modals for task and project detail views
+	•	Implement dark mode toggle for the app
+	•	Ensure mobile responsiveness and clean layout across devices
