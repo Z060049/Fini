@@ -40,7 +40,26 @@ interface TodoItem {
   parentId?: string | null;
   order?: number;
   isDefault?: boolean;
+  tag?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null;
 }
+
+// Tag color mapping helper
+const tagColorMap: Record<string, string> = {
+  red: '#ef4444',
+  orange: '#f59e42',
+  yellow: '#eab308',
+  green: '#22c55e',
+  blue: '#3b82f6',
+  purple: '#a855f7',
+};
+const tagBgMap: Record<string, string> = {
+  red: 'bg-red-100 text-red-800',
+  orange: 'bg-orange-100 text-orange-800',
+  yellow: 'bg-yellow-100 text-yellow-800',
+  green: 'bg-green-100 text-green-800',
+  blue: 'bg-blue-100 text-blue-800',
+  purple: 'bg-purple-100 text-purple-800',
+};
 
 export default function Todo() {
   const [user] = useAuthState(auth);
@@ -188,8 +207,9 @@ export default function Todo() {
         source: 'gmail',
         progress: 0,
         order: getNextOrder(topLevelProjects),
+        tag: null,
       });
-      gmailProject = { id: newProjectRef.id, text: 'Gmail', status: 'To do' } as TodoItem;
+      gmailProject = { id: newProjectRef.id, text: 'Gmail', status: 'To do', tag: null } as TodoItem;
     }
 
     // Helper to get sender name
@@ -223,6 +243,7 @@ export default function Todo() {
         progress: 0,
         parentId: gmailProject.id,
         order: order++,
+        tag: null,
       });
     }
 
@@ -249,6 +270,7 @@ export default function Todo() {
       source: 'manual',
       progress: 0,
       order: getNextOrder(topLevelProjects),
+      tag: null,
     });
     setNewTodo('');
     setNewProject('');
@@ -284,6 +306,7 @@ export default function Todo() {
         progress: 0,
         parentId: parentTask.id,
         order: getNextOrder(subtasks),
+        tag: null,
       });
       // Auto-expand after adding
       setCollapsedTasks(prev => prev.filter(id => id !== parentTask.id));
@@ -460,10 +483,11 @@ export default function Todo() {
             <div ref={provided.innerRef} {...provided.droppableProps}>
               {topLevelTodos.length > 0 && (
                 <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase px-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                  <span className="w-12 shrink-0"></span> {/* Spacer for handle + checkbox */}
+                  <span className="w-12 shrink-0"></span>
                   <span className="flex-1 px-2 text-left">Project</span>
-                  <span className="w-24 shrink-0 px-2 text-left">Source</span>
-                  <span className="w-28 shrink-0 px-2 text-left">Priority</span>
+                  <span className="w-20 shrink-0 px-2 text-center">Tags</span>
+                  <span className="w-24 shrink-0 px-2 text-center">Source</span>
+                  <span className="w-28 shrink-0 px-2 text-center">Priority</span>
                   <span className="w-24 shrink-0 text-center">Progress</span>
                   <span className="w-28 shrink-0 px-2 text-left">Due Date</span>
                 </div>
@@ -504,26 +528,32 @@ export default function Todo() {
                               <span className="w-6 block"></span>
                             )}
                             <span onClick={(e) => { e.stopPropagation(); startEditing(parent, 'text'); }} className="px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{parent.text}</span>
+                            {/* Actions (Open/Delete) */}
+                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ml-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openProjectDetail(parent);
+                                }}
+                                className="flex items-center space-x-1 px-2 py-1 border rounded-md text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                              >
+                                <DocumentDuplicateIcon className="h-3 w-3" />
+                                <span>Open</span>
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleAddSubTask(parent); }} className="p-1 border rounded-md bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600">
+                                <PlusIcon className="h-4 w-4" />
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); deleteTodo(parent.id); }} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:text-red-400" title="Delete">
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
-                          {/* Actions */}
-                          <div className="w-32 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openProjectDetail(parent);
-                              }}
-                              className="flex items-center space-x-1 px-2 py-1 border rounded-md text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                            >
-                              <DocumentDuplicateIcon className="h-3 w-3" />
-                              <span>Open</span>
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); handleAddSubTask(parent); }} className="p-1 border rounded-md bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600">
-                              <PlusIcon className="h-4 w-4" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); deleteTodo(parent.id); }} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:text-red-400" title="Delete">
-                              <TrashIcon className="h-4 w-4" />
-                            </button>
-                          </div>
+                          {/* Tags column */}
+                          <span className="w-20 shrink-0 px-2 flex items-center justify-center">
+                            {parent.tag ? (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${tagBgMap[parent.tag.toLowerCase()] || 'bg-gray-200 text-gray-700'}`}>{parent.tag.charAt(0).toUpperCase() + parent.tag.slice(1).toLowerCase()}</span>
+                            ) : null}
+                          </span>
                           {/* Source */}
                           <span className="w-24 shrink-0 px-2 flex justify-center items-center">
                             <SourceIcon source={parent.source} />
@@ -582,23 +612,29 @@ export default function Todo() {
                                           ) : (
                                             <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="ml-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.text}</span>
                                           )}
+                                          {/* Actions (Open/Delete) */}
+                                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ml-2">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openTaskDetail(todo);
+                                              }}
+                                              className="flex items-center space-x-1 px-2 py-1 border rounded-md text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                                            >
+                                              <DocumentDuplicateIcon className="h-3 w-3" />
+                                              <span>Open</span>
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); deleteTodo(todo.id); }} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:text-red-400" title="Delete">
+                                              <TrashIcon className="h-4 w-4" />
+                                            </button>
+                                          </div>
                                         </div>
-                                        {/* Actions */}
-                                        <div className="w-32 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              openTaskDetail(todo);
-                                            }}
-                                            className="flex items-center space-x-1 px-2 py-1 border rounded-md text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                                          >
-                                            <DocumentDuplicateIcon className="h-3 w-3" />
-                                            <span>Open</span>
-                                          </button>
-                                          <button onClick={(e) => { e.stopPropagation(); deleteTodo(todo.id); }} className="p-1.5 rounded-md text-gray-400 hover:text-red-500 dark:text-red-400" title="Delete">
-                                            <TrashIcon className="h-4 w-4" />
-                                          </button>
-                                        </div>
+                                        {/* Tags column */}
+                                        <span className="w-20 shrink-0 px-2 flex items-center justify-center">
+                                          {todo.tag ? (
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${tagBgMap[todo.tag.toLowerCase()] || 'bg-gray-200 text-gray-700'}`}>{todo.tag.charAt(0).toUpperCase() + todo.tag.slice(1).toLowerCase()}</span>
+                                          ) : null}
+                                        </span>
                                         {/* Source */}
                                         <span className="w-24 shrink-0 px-2 flex justify-center items-center">
                                           <SourceIcon source={todo.source} />
