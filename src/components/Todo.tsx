@@ -485,7 +485,7 @@ export default function Todo() {
                 <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase px-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="w-12 shrink-0"></span>
                   <span className="flex-1 px-2 text-left">Project</span>
-                  <span className="w-20 shrink-0 px-2 text-center">Tags</span>
+                  <span className="w-20 shrink-0 px-2 text-center">Tag</span>
                   <span className="w-24 shrink-0 px-2 text-center">Source</span>
                   <span className="w-28 shrink-0 px-2 text-center">Priority</span>
                   <span className="w-24 shrink-0 text-center">Progress</span>
@@ -519,16 +519,18 @@ export default function Todo() {
                             <Bars3Icon className="h-4 w-4" />
                           </span>
                           {/* Name */}
-                          <div className="flex-1 flex items-center">
-                            {subtasks.length > 0 ? (
-                              <button onClick={() => toggleCollapse(parent.id)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-                                {isCollapsed ? <ChevronRightIcon className="h-4 w-4 text-gray-500" /> : <ChevronDownIcon className="h-4 w-4 text-gray-500" />}
-                              </button>
-                            ) : (
-                              <span className="w-6 block"></span>
-                            )}
-                            <span onClick={(e) => { e.stopPropagation(); startEditing(parent, 'text'); }} className="px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{parent.text}</span>
-                            {/* Actions (Open/Delete) */}
+                          <div className="flex-1 flex items-center justify-between">
+                            <div className="flex items-center">
+                              {subtasks.length > 0 ? (
+                                <button onClick={() => toggleCollapse(parent.id)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                                  {isCollapsed ? <ChevronRightIcon className="h-4 w-4 text-gray-500" /> : <ChevronDownIcon className="h-4 w-4 text-gray-500" />}
+                                </button>
+                              ) : (
+                                <span className="w-6 block"></span>
+                              )}
+                              <span onClick={(e) => { e.stopPropagation(); startEditing(parent, 'text'); }} className="px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{parent.text}</span>
+                            </div>
+                            {/* Actions (Open/Add/Delete) at far right of project name cell */}
                             <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ml-2">
                               <button
                                 onClick={(e) => {
@@ -551,7 +553,18 @@ export default function Todo() {
                           {/* Tags column */}
                           <span className="w-20 shrink-0 px-2 flex items-center justify-center">
                             {parent.tag ? (
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${tagBgMap[parent.tag.toLowerCase()] || 'bg-gray-200 text-gray-700'}`}>{parent.tag.charAt(0).toUpperCase() + parent.tag.slice(1).toLowerCase()}</span>
+                              <span className="relative group flex items-center justify-center">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${tagBgMap[parent.tag.toLowerCase()] || 'bg-gray-200 text-gray-700'}`}>{parent.tag.charAt(0).toUpperCase() + parent.tag.slice(1).toLowerCase()}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateTodo(parent.id, { tag: null })}
+                                  className="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full border border-gray-300 flex items-center justify-center text-xs text-gray-500 z-20 shadow opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                                  style={{ fontSize: '10px', lineHeight: 1 }}
+                                  aria-label="Remove tag"
+                                >
+                                  ×
+                                </button>
+                              </span>
                             ) : null}
                           </span>
                           {/* Source */}
@@ -593,26 +606,28 @@ export default function Todo() {
                                           <Bars3Icon className="h-4 w-4" />
                                         </span>
                                         {/* Name (with indent for tasks) */}
-                                        <div className="flex-1 flex items-center pl-6">
-                                          <button onClick={(e) => { e.stopPropagation(); toggleTodoStatus(todo.id, todo.status); }} className="p-0 align-middle">
-                                            <span className={`h-4 w-4 rounded-full flex items-center justify-center ${todo.status === 'Done' ? 'bg-green-100 dark:bg-green-800' : 'border border-black dark:border-white'}`} style={{ minWidth: '1rem', minHeight: '1rem' }}>
-                                              {todo.status === 'Done' && <CheckIcon className="h-3 w-3 text-green-600 dark:text-green-300" />}
-                                            </span>
-                                          </button>
-                                          {editingTodo?.id === todo.id && editingTodo.field === 'text' ? (
-                                            <input
-                                              type="text"
-                                              value={editingText}
-                                              onChange={(e) => setEditingText(e.target.value)}
-                                              onBlur={saveEditing}
-                                              onKeyDown={handleInputKeyDown}
-                                              autoFocus
-                                              className="flex-1 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white ml-2"
-                                            />
-                                          ) : (
-                                            <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="ml-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.text}</span>
-                                          )}
-                                          {/* Actions (Open/Delete) */}
+                                        <div className="flex-1 flex items-center justify-between pl-6">
+                                          <div className="flex items-center">
+                                            <button onClick={(e) => { e.stopPropagation(); toggleTodoStatus(todo.id, todo.status); }} className="p-0 align-middle">
+                                              <span className={`h-4 w-4 rounded-full flex items-center justify-center ${todo.status === 'Done' ? 'bg-green-100 dark:bg-green-800' : 'border border-black dark:border-white'}`} style={{ minWidth: '1rem', minHeight: '1rem' }}>
+                                                {todo.status === 'Done' && <CheckIcon className="h-3 w-3 text-green-600 dark:text-green-300" />}
+                                              </span>
+                                            </button>
+                                            {editingTodo?.id === todo.id && editingTodo.field === 'text' ? (
+                                              <input
+                                                type="text"
+                                                value={editingText}
+                                                onChange={(e) => setEditingText(e.target.value)}
+                                                onBlur={saveEditing}
+                                                onKeyDown={handleInputKeyDown}
+                                                autoFocus
+                                                className="flex-1 bg-transparent border-b border-blue-500 focus:outline-none dark:text-white ml-2"
+                                              />
+                                            ) : (
+                                              <span onClick={(e) => { e.stopPropagation(); startEditing(todo, 'text'); }} className="ml-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{todo.text}</span>
+                                            )}
+                                          </div>
+                                          {/* Actions (Open/Delete) at far right of task name cell */}
                                           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ml-2">
                                             <button
                                               onClick={(e) => {
@@ -632,7 +647,18 @@ export default function Todo() {
                                         {/* Tags column */}
                                         <span className="w-20 shrink-0 px-2 flex items-center justify-center">
                                           {todo.tag ? (
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${tagBgMap[todo.tag.toLowerCase()] || 'bg-gray-200 text-gray-700'}`}>{todo.tag.charAt(0).toUpperCase() + todo.tag.slice(1).toLowerCase()}</span>
+                                            <span className="relative group flex items-center justify-center">
+                                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${tagBgMap[todo.tag.toLowerCase()] || 'bg-gray-200 text-gray-700'}`}>{todo.tag.charAt(0).toUpperCase() + todo.tag.slice(1).toLowerCase()}</span>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleUpdateTodo(todo.id, { tag: null })}
+                                                className="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full border border-gray-300 flex items-center justify-center text-xs text-gray-500 z-20 shadow opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                                                style={{ fontSize: '10px', lineHeight: 1 }}
+                                                aria-label="Remove tag"
+                                              >
+                                                ×
+                                              </button>
+                                            </span>
                                           ) : null}
                                         </span>
                                         {/* Source */}

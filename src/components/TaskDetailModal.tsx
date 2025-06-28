@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { CircularProgress } from './CircularProgress';
 
 interface TodoItem {
@@ -15,6 +15,7 @@ interface TodoItem {
   source: 'manual' | 'slack' | 'zoom' | 'gmail';
   progress: number;
   description?: string;
+  tag?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null;
 }
 
 interface TaskDetailModalProps {
@@ -24,12 +25,22 @@ interface TaskDetailModalProps {
   onUpdate: (taskId: string, updatedData: Partial<TodoItem>) => void;
 }
 
+const tagColors = [
+  { name: 'red', color: '#ef4444' },
+  { name: 'orange', color: '#f59e42' },
+  { name: 'yellow', color: '#eab308' },
+  { name: 'green', color: '#22c55e' },
+  { name: 'blue', color: '#3b82f6' },
+  { name: 'purple', color: '#a855f7' },
+];
+
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task, onUpdate }) => {
   const [text, setText] = useState('');
   const [project, setProject] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [description, setDescription] = useState('');
+  const [selectedTag, setSelectedTag] = useState<'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,6 +50,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setDueDate(task.dueDate);
       setPriority(task.priority || 'medium');
       setDescription(task.description || '');
+      setSelectedTag(task.tag || null);
     }
   }, [task]);
   
@@ -61,6 +73,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
     onUpdate(task.id, { text, project, dueDate, priority, description });
     onClose();
+  };
+
+  const handleTagSelect = (tag: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null) => {
+    setSelectedTag(tag);
+    if (task) {
+      onUpdate(task.id, { tag });
+    }
   };
 
   const getPriorityStyle = (p: string) => {
@@ -119,7 +138,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   {(['low', 'medium', 'high', 'urgent'] as const).map(p => (
                     <button
                       key={p}
-                      onClick={() => setPriority(p)}
+                      onClick={() => setPriority(p as 'low' | 'medium' | 'high' | 'urgent')}
                       className={`px-3 py-1 text-sm rounded-full capitalize ${priority === p ? getPriorityStyle(p) + ' ring-2 ring-blue-500' : getPriorityStyle(p)}`}
                     >
                       {p}
@@ -128,6 +147,29 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 </div>
               </div>
               
+              <div className="flex items-center mb-2">
+                <span className="w-1/4 text-sm font-medium text-gray-500 dark:text-gray-300">Tag</span>
+                <div className="w-3/4 flex items-center gap-3">
+                  {tagColors.map(({ name, color }) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => handleTagSelect(name as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null)}
+                      className={`relative focus:outline-none rounded-full border-2 transition-all duration-150 ${selectedTag === name ? 'border-blue-500' : 'border-transparent'}`}
+                      style={{ width: 20, height: 20, backgroundColor: color }}
+                      aria-label={name.charAt(0).toUpperCase() + name.slice(1)}
+                    >
+                      {selectedTag === name && (
+                        <CheckIcon className="absolute left-1/2 top-1/2 w-3 h-3 text-white" style={{ transform: 'translate(-50%, -50%)' }} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center mb-4">
+                <span className="w-1/4"></span>
+                <span className="w-3/4 text-sm text-gray-500 dark:text-gray-400">Tags...</span>
+              </div>
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-2">Description</span>
                 <textarea
