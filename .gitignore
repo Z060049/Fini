@@ -25,4 +25,4 @@ dist-ssr
 \n# Local environment variables\n.env.local
 
 # Firebase service account (do not commit)
-serviceAccount.json
+serviceAccountKey.json

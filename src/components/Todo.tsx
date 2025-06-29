@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckIcon, PencilIcon, TrashIcon, Bars3Icon, PencilSquareIcon, DocumentDuplicateIcon, PlusIcon, ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { db, auth } from '../firebase';
-import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import type { DropResult } from 'react-beautiful-dnd';
@@ -96,8 +96,7 @@ export default function Todo() {
       });
       setTodos(todosData);
       setTodosLoaded(true);
-      (window as any)._debugTodos = todosData;
-      console.log('Todos from Firestore:', todosData);
+      console.log('Todos from Firestore:', todosData.map(t => `${t.text} (order ${t.order})`));
     });
 
     return () => unsubscribe();
@@ -368,17 +367,44 @@ export default function Todo() {
     }
 
     if (type === 'SUBTASK') {
-      // Dragging a subtask between projects
-      const newProject = todos.find(todo => todo.id === destination.droppableId && !todo.parentId);
-      if (!newProject) return;
-      const tasksInProject = todos.filter(t => t.parentId === newProject.id);
-      const reordered = [...tasksInProject];
-      const fromIndex = reordered.findIndex(t => t.id === draggedTodo.id);
-      if (fromIndex !== -1) reordered.splice(fromIndex, 1);
-      reordered.splice(destination.index, 0, draggedTodo);
-      reordered.forEach((task, idx) => {
-        handleUpdateTodo(task.id, { order: idx, parentId: newProject.id });
+      const sourceProject = todos.find(todo => todo.id === source.droppableId && !todo.parentId);
+      const destProject = todos.find(todo => todo.id === destination.droppableId && !todo.parentId);
+      if (!sourceProject || !destProject) return;
+
+      const sourceSubtasks = todos.filter(t => t.parentId === sourceProject.id)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const destSubtasks = sourceProject.id === destProject.id
+        ? sourceSubtasks
+        : todos.filter(t => t.parentId === destProject.id)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+      const fromIndex = sourceSubtasks.findIndex(t => t.id === draggableId);
+      let [movedTask] = sourceSubtasks.splice(fromIndex, 1);
+
+      if (sourceProject.id !== destProject.id) {
+        movedTask = { ...movedTask, parentId: destProject.id };
+      }
+
+      destSubtasks.splice(destination.index, 0, movedTask);
+
+      // --- Batch update ---
+      const batch = writeBatch(db);
+      // Update source subtasks
+      sourceSubtasks.forEach((task, idx) => {
+        batch.update(doc(db, 'todos', task.id), { order: idx, parentId: sourceProject.id });
       });
+      // Update dest subtasks if different
+      if (sourceProject.id !== destProject.id) {
+        destSubtasks.forEach((task, idx) => {
+          batch.update(doc(db, 'todos', task.id), { order: idx, parentId: destProject.id });
+        });
+      } else {
+        // If same project, update destSubtasks (which is the same as sourceSubtasks after move)
+        destSubtasks.forEach((task, idx) => {
+          batch.update(doc(db, 'todos', task.id), { order: idx, parentId: destProject.id });
+        });
+      }
+      batch.commit();
     }
   };
 
@@ -496,7 +522,8 @@ export default function Todo() {
               {topLevelTodos.map((parent, projectIndex) => {
                 const isCollapsed = collapsedTasks.includes(parent.id);
                 const subtasks = subtasksByParentId[parent.id] || [];
-                subtasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || ((a.timestamp?.toDate?.() || 0) - (b.timestamp?.toDate?.() || 0)));
+                subtasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                console.log('Subtasks:', subtasks.map(t => `${t.text} (order ${t.order})`));
                 // Helper to calculate progress for main tasks with subtasks
                 const getSubtaskProgress = (parentId: string) => {
                   const subtasks = subtasksByParentId[parentId] || [];
