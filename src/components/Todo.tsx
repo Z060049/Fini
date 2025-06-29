@@ -486,6 +486,27 @@ export default function Todo() {
     setSelectedProject(project);
   };
 
+  const startEditingDueDate = (todo: TodoItem) => {
+    setEditingDueDate({ id: todo.id });
+    setEditingDueDateValue(todo.dueDate || '');
+  };
+
+  const saveEditingDueDate = async () => {
+    if (!editingDueDate) return;
+    await handleUpdateTodo(editingDueDate.id, { dueDate: editingDueDateValue });
+    setEditingDueDate(null);
+    setEditingDueDateValue('');
+  };
+
+  const handleDueDateInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      saveEditingDueDate();
+    } else if (e.key === 'Escape') {
+      setEditingDueDate(null);
+      setEditingDueDateValue('');
+    }
+  };
+
   const renderTodoList = (status: 'To do' | 'Doing' | 'Done') => {
     const subtasksByParentId = todos.reduce((acc, todo) => {
       if (todo.parentId) {
@@ -555,7 +576,26 @@ export default function Todo() {
                               ) : (
                                 <span className="w-6 block"></span>
                               )}
-                              <span onClick={(e) => { e.stopPropagation(); startEditing(parent, 'text'); }} className="px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600">{parent.text}</span>
+                              {editingTodo?.id === parent.id && editingTodo.field === 'project' ? (
+                                <input
+                                  type="text"
+                                  value={editingText}
+                                  onChange={e => setEditingText(e.target.value)}
+                                  onBlur={saveEditing}
+                                  onKeyDown={handleInputKeyDown}
+                                  autoFocus
+                                  className="px-2 text-gray-800 dark:text-gray-200 bg-transparent border-b border-blue-500 focus:outline-none rounded-md"
+                                  style={{ minWidth: 80 }}
+                                />
+                              ) : (
+                                <span
+                                  onClick={e => { e.stopPropagation(); startEditing(parent, 'project'); }}
+                                  className="px-2 text-gray-800 dark:text-gray-200 cursor-pointer rounded-md hover:border hover:border-gray-300 dark:hover:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-700 transition"
+                                  title="Click to edit project name"
+                                >
+                                  {parent.project}
+                                </span>
+                              )}
                             </div>
                             {/* Actions (Open/Add/Delete) at far right of project name cell */}
                             <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ml-2">
@@ -613,7 +653,28 @@ export default function Todo() {
                             ) : null}
                           </span>
                           {/* Due Date */}
-                          <span className="w-28 shrink-0 px-2 flex items-center text-left text-gray-600 dark:text-gray-400">{parent.dueDate || 'Not scheduled'}</span>
+                          <span className="w-28 shrink-0 px-2 flex items-center text-left">
+                            {editingDueDate?.id === parent.id ? (
+                              <input
+                                type="date"
+                                value={editingDueDateValue}
+                                onChange={e => setEditingDueDateValue(e.target.value)}
+                                onBlur={saveEditingDueDate}
+                                onKeyDown={handleDueDateInputKeyDown}
+                                autoFocus
+                                className="w-full px-2 py-1 border-b border-blue-500 bg-white dark:bg-gray-700 dark:text-white focus:outline-none rounded-md"
+                                style={{ minWidth: 100, maxWidth: 120 }}
+                              />
+                            ) : (
+                              <span
+                                onClick={e => { e.stopPropagation(); startEditingDueDate(parent); }}
+                                className="w-full text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 rounded-md transition"
+                                title="Click to edit due date"
+                              >
+                                {parent.dueDate || 'Not scheduled'}
+                              </span>
+                            )}
+                          </span>
                         </div>
                         {/* Subtasks (Draggables) */}
                         {!isCollapsed && (
@@ -703,7 +764,28 @@ export default function Todo() {
                                         {/* Progress (empty for tasks) */}
                                         <span className="w-24 shrink-0 flex justify-center items-center"></span>
                                         {/* Due Date */}
-                                        <span className="w-28 shrink-0 px-2 flex items-center text-left text-gray-600 dark:text-gray-400">{todo.dueDate || 'Not scheduled'}</span>
+                                        <span className="w-28 shrink-0 px-2 flex items-center text-left">
+                                          {editingDueDate?.id === todo.id ? (
+                                            <input
+                                              type="date"
+                                              value={editingDueDateValue}
+                                              onChange={e => setEditingDueDateValue(e.target.value)}
+                                              onBlur={saveEditingDueDate}
+                                              onKeyDown={handleDueDateInputKeyDown}
+                                              autoFocus
+                                              className="w-full px-2 py-1 border-b border-blue-500 bg-white dark:bg-gray-700 dark:text-white focus:outline-none rounded-md"
+                                              style={{ minWidth: 100, maxWidth: 120 }}
+                                            />
+                                          ) : (
+                                            <span
+                                              onClick={e => { e.stopPropagation(); startEditingDueDate(todo); }}
+                                              className="w-full text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 rounded-md transition"
+                                              title="Click to edit due date"
+                                            >
+                                              {todo.dueDate || 'Not scheduled'}
+                                            </span>
+                                          )}
+                                        </span>
                                       </div>
                                     )}
                                   </Draggable>
