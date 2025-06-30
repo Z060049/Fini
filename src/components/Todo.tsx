@@ -584,7 +584,7 @@ export default function Todo() {
                                   onBlur={saveEditing}
                                   onKeyDown={handleInputKeyDown}
                                   autoFocus
-                                  className="px-2 text-gray-800 dark:text-gray-200 bg-transparent border-b border-blue-500 focus:outline-none rounded-md"
+                                  className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white"
                                   style={{ minWidth: 80 }}
                                 />
                               ) : (
@@ -641,8 +641,17 @@ export default function Todo() {
                           {/* Priority */}
                           <span className="w-28 shrink-0 px-2 flex justify-center items-center">
                             {parent.priority && (
-                              <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(parent.priority)}`}> 
-                                {parent.priority.charAt(0).toUpperCase() + parent.priority.slice(1)}
+                              <span className={`relative group flex items-center justify-center`}>
+                                <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(parent.priority)}`}>{parent.priority.charAt(0).toUpperCase() + parent.priority.slice(1)}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateTodo(parent.id, { priority: undefined })}
+                                  className="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full border border-gray-300 flex items-center justify-center text-xs text-gray-500 z-20 shadow opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                                  style={{ fontSize: '10px', lineHeight: 1 }}
+                                  aria-label="Remove priority"
+                                >
+                                  ×
+                                </button>
                               </span>
                             )}
                           </span>
@@ -756,8 +765,17 @@ export default function Todo() {
                                         {/* Priority */}
                                         <span className="w-28 shrink-0 px-2 flex justify-center items-center">
                                           {todo.priority && (
-                                            <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(todo.priority)}`}> 
-                                              {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}
+                                            <span className={`relative group flex items-center justify-center`}>
+                                              <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityStyle(todo.priority)}`}>{todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}</span>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleUpdateTodo(todo.id, { priority: undefined })}
+                                                className="absolute -top-2 -right-2 w-4 h-4 bg-white rounded-full border border-gray-300 flex items-center justify-center text-xs text-gray-500 z-20 shadow opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                                                style={{ fontSize: '10px', lineHeight: 1 }}
+                                                aria-label="Remove priority"
+                                              >
+                                                ×
+                                              </button>
                                             </span>
                                           )}
                                         </span>
@@ -818,16 +836,16 @@ export default function Todo() {
           <div className="flex gap-6 w-full">
             {/* Left Sidebar */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 w-72 shrink-0 h-fit">
-              <h2 className="text-md font-semibold mb-3 dark:text-gray-200">Add a Project</h2>
+              <h2 className="text-md font-semibold mb-3 text-black dark:text-white">Add a Project</h2>
               <div className="flex flex-col space-y-3">
-                <input type="text" value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Project name" className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" />
-                <select value={newPriority} onChange={(e) => setNewPriority(e.target.value as any)} className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <input type="text" value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Project name" className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white" />
+                <select value={newPriority} onChange={(e) => setNewPriority(e.target.value as any)} className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white">
                   <option value="low">Low Priority</option>
                   <option value="medium">Medium Priority</option>
                   <option value="high">High Priority</option>
                   <option value="urgent">Urgent</option>
                 </select>
-                <input type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                <input type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white" />
                 <button onClick={addTodo} className="flex items-center justify-center bg-blue-500 text-white px-3 py-1.5 rounded-md hover:bg-blue-600 transition-colors text-sm dark:bg-blue-600 dark:hover:bg-blue-700">Add Project</button>
               </div>
 
