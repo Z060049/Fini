@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckIcon, PencilIcon, TrashIcon, Bars3Icon, PencilSquareIcon, DocumentDuplicateIcon, PlusIcon, ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { db, auth } from '../firebase';
-import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, Timestamp, writeBatch, deleteField } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import type { DropResult } from 'react-beautiful-dnd';
@@ -14,6 +14,7 @@ import { gapi } from 'gapi-script';
 import { GmailModal } from './GmailModal';
 import TaskDetailModal from './TaskDetailModal';
 import ProjectDetailModal from './ProjectDetailModal';
+import type { LlmTodo } from './GmailModal';
 
 interface GmailEmail {
   id: string;
@@ -440,15 +441,28 @@ export default function Todo() {
   const handleUpdateTodo = async (id: string, updatedData: Partial<TodoItem>) => {
     if (!user) return;
     
-    // Optimistic update
+    // Optimistic update (do not set priority to deleteField() here)
     setTodos(prevTodos => 
-      prevTodos.map(todo => 
-        todo.id === id ? { ...todo, ...updatedData } : todo
-      )
+      prevTodos.map(todo => {
+        if (todo.id === id) {
+          // If priority is being cleared, set to undefined
+          if (updatedData.hasOwnProperty('priority') && updatedData.priority === undefined) {
+            const { priority, ...rest } = updatedData;
+            return { ...todo, ...rest, priority: undefined };
+          }
+          return { ...todo, ...updatedData };
+        }
+        return todo;
+      })
     );
 
     const todoDoc = doc(db, 'todos', id);
-    await updateDoc(todoDoc, updatedData);
+    // Only use deleteField() in the Firestore update, not in any object used for local state
+    const firestoreUpdate: any = { ...updatedData };
+    if (updatedData.hasOwnProperty('priority') && updatedData.priority === undefined) {
+      firestoreUpdate.priority = deleteField();
+    }
+    await updateDoc(todoDoc, firestoreUpdate);
   };
 
   const startEditing = (todo: TodoItem, field: 'text' | 'project') => {
@@ -829,6 +843,72 @@ export default function Todo() {
     );
   };
 
+  // Handler to add LLM-generated todos to a project in To do
+  const handleAddLlmTodosToProject = async (llmTodos: LlmTodo[]) => {
+    if (!user || !llmTodos || llmTodos.length === 0) return;
+    const projectName = llmTodos[0].project;
+    let project = todos.find(t => !t.parentId && t.text === projectName && t.status === 'To do');
+    if (!project) {
+      const topLevelProjects = todos.filter(t => !t.parentId);
+      const newProjectRef = await addDoc(collection(db, 'todos'), {
+        text: projectName,
+        priority: 'medium',
+        project: projectName,
+        dueDate: '',
+        status: 'To do',
+        creator: user.displayName || user.email || 'Unknown',
+        stakeholder: user.displayName || user.email || 'Unknown',
+        created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+        userId: user.uid,
+        timestamp: new Date(),
+        source: 'gmail',
+        progress: 0,
+        order: getNextOrder(topLevelProjects),
+        tag: null,
+      });
+      project = {
+        id: newProjectRef.id,
+        text: projectName,
+        priority: 'medium',
+        project: projectName,
+        dueDate: '',
+        status: 'To do',
+        creator: user.displayName || user.email || 'Unknown',
+        stakeholder: user.displayName || user.email || 'Unknown',
+        created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+        userId: user.uid,
+        timestamp: new Date(),
+        source: 'gmail',
+        progress: 0,
+        order: getNextOrder(topLevelProjects),
+        tag: null,
+      };
+    }
+    if (!project) return;
+    const subtasks = todos.filter(t => t.parentId === project.id);
+    let order = getNextOrder(subtasks);
+    for (const todo of llmTodos) {
+      await addDoc(collection(db, 'todos'), {
+        text: todo.description,
+        priority: 'medium',
+        project: projectName,
+        dueDate: todo.dueDate,
+        status: 'To do',
+        creator: user.displayName || user.email || 'Unknown',
+        stakeholder: user.displayName || user.email || 'Unknown',
+        created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+        userId: user.uid,
+        timestamp: new Date(),
+        source: 'gmail',
+        progress: 0,
+        parentId: project.id,
+        order: order++,
+        tag: null,
+      });
+    }
+    setIsGmailModalOpen(false);
+  }
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="w-screen min-h-screen bg-gray-100 dark:bg-gray-900 py-6">
@@ -885,6 +965,8 @@ export default function Todo() {
           selectedEmails={selectedEmails}
           onEmailSelect={handleEmailSelect}
           onConvertToTodo={convertEmailsToTodos}
+          projectOptions={[...new Set(todos.map(t => t.project).filter(Boolean))]}
+          onAddLlmTodosToProject={handleAddLlmTodosToProject as (llmTodos: LlmTodo[]) => void}
         />
         <TaskDetailModal 
           isOpen={!!selectedTask}
