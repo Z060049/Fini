@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
+import { CircularProgress } from './CircularProgress';
 
 interface GmailEmail {
   id: string;
@@ -111,7 +112,12 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white text-2xl">&times;</button>
         </div>
         <div className="flex-grow overflow-y-auto">
-          {isProcessing ? (
+          {isLoading && !llmResults ? (
+            <div className="flex flex-col justify-center items-center h-full py-10">
+              <CircularProgress progress={70} size={48} />
+              <p className="mt-4 text-gray-600">Loading emails...</p>
+            </div>
+          ) : isProcessing ? (
             <div className="flex flex-col justify-center items-center h-full py-10">
               <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent border-solid rounded-full animate-spin"></div>
               <p className="mt-4 text-gray-600">Processing...</p>

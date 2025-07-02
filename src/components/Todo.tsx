@@ -521,7 +521,7 @@ export default function Todo() {
     }
   };
 
-  const renderTodoList = (status: 'To do' | 'Doing' | 'Done') => {
+  const renderTodoList = (status: 'To do') => {
     const subtasksByParentId = todos.reduce((acc, todo) => {
       if (todo.parentId) {
         if (!acc[todo.parentId]) {
@@ -951,8 +951,6 @@ export default function Todo() {
             <div className="flex-grow">
               <div className="space-y-6">
                 {renderTodoList('To do')}
-                {renderTodoList('Doing')}
-                {renderTodoList('Done')}
               </div>
             </div>
           </div>
