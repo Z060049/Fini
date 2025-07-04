@@ -307,6 +307,7 @@ export default function Todo() {
         parentId: parentTask.id,
         order: getNextOrder(subtasks),
         tag: null,
+        priority: undefined,
       });
       // Auto-expand after adding
       setCollapsedTasks(prev => prev.filter(id => id !== parentTask.id));
