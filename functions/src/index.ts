@@ -55,12 +55,13 @@ exports.generateTodos = firebaseFunctions.https.onRequest(
 You are an expert productivity assistant. Given the following projects and their to-dos:
 ${JSON.stringify(projects, null, 2)}
 
-And the following emails (title and content):
+And the following emails (subject and sender):
 ${JSON.stringify(emails, null, 2)}
 
-For each email, do the following:
-- Map it to the most relevant project (by title/content). If no good match, use the 'Gmail' project.
-- Generate a concise, actionable to-do description based on the email title and content.
+Instructions:
+- For each unique email subject, generate only one task, even if there are multiple emails with the same subject (e.g., multiple people replying to the same thread).
+- Map each email to the most relevant project (by subject/sender). If no good match, use the 'Gmail' project.
+- Generate a concise, actionable to-do description based on the email subject and sender only. Do not use or reference email content.
 
 Respond in this JSON format:
 [

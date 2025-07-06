@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { CircularProgress } from './CircularProgress';
 import type { TodoItem } from './types';
+import { DocumentDuplicateIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface GmailEmail {
   id: string;
   subject: string;
   from: string;
+  to: string;
   date: string;
 }
 
@@ -18,6 +20,7 @@ interface GmailModalProps {
   selectedEmails: string[];
   onEmailSelect: (emailId: string) => void;
   onConvertToTodo: () => void;
+  onLoadMoreEmails?: () => void;
   projectOptions: string[];
   onAddLlmTodosToProject: (llmTodos: LlmTodo[]) => void;
   allTodos: TodoItem[];
@@ -31,11 +34,34 @@ export interface LlmTodo {
   dueDate: string;
 }
 
-export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails, isLoading, selectedEmails, onEmailSelect, onConvertToTodo, projectOptions, onAddLlmTodosToProject, allTodos }) => {
+export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails, isLoading, selectedEmails, onEmailSelect, onConvertToTodo, onLoadMoreEmails, projectOptions, onAddLlmTodosToProject, allTodos }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [llmResults, setLlmResults] = useState<LlmTodo[] | null>(null);
   const [editing, setEditing] = useState<{ id: string; field: 'project' | 'description' | 'dueDate'; value: string } | null>(null);
   const [selectedLlmTodos, setSelectedLlmTodos] = useState<string[]>([]);
+  const [showEmailDetails, setShowEmailDetails] = useState<{ open: boolean, emailId: string | null }>({ open: false, emailId: null });
+
+  // Pre-select all tasks when llmResults is set
+  React.useEffect(() => {
+    if (llmResults) {
+      setSelectedLlmTodos(llmResults.map(todo => todo.id));
+    }
+  }, [llmResults]);
+
+  // Close modals on Escape key
+  React.useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showEmailDetails.open) {
+          setShowEmailDetails({ open: false, emailId: null });
+        } else if (isOpen) {
+          onClose();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, showEmailDetails.open, onClose]);
 
   if (!isOpen) return null;
 
@@ -69,7 +95,14 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
     setLlmResults(null);
     try {
       // Prepare data for API
-      const selectedEmailObjs = emails.filter(e => selectedEmails.includes(e.id));
+      // Deduplicate emails by subject (keep the first occurrence)
+      const uniqueEmailsMap = new Map();
+      emails.filter(e => selectedEmails.includes(e.id)).forEach(e => {
+        if (!uniqueEmailsMap.has(e.subject)) {
+          uniqueEmailsMap.set(e.subject, e);
+        }
+      });
+      const uniqueEmails = Array.from(uniqueEmailsMap.values());
       // Only include unique, active project names from top-level todos
       const activeProjectNames = [
         ...new Set(
@@ -81,7 +114,7 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
       ];
       const apiBody = {
         projects: activeProjectNames.map(title => ({ title })),
-        emails: selectedEmailObjs.map(e => ({ id: e.id, title: e.subject, content: e.subject })),
+        emails: uniqueEmails.map(e => ({ id: e.id, subject: e.subject, sender: getSenderName(e.from) })),
       };
       console.log('Sending to OpenAI backend:', apiBody);
       // Call your deployed Firebase function
@@ -137,7 +170,7 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-6 sm:p-8 md:p-12">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col pl-10 pr-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] flex flex-col pl-10 pr-4">
         <div className="flex justify-between items-center px-4 pt-4 pb-1">
           <h2 className="text-lg font-semibold dark:text-gray-200">
             {llmResults ? 'Auto generated to-dos based on email title' : 'Select Emails to Convert to to-dos'}
@@ -173,93 +206,162 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
                         }}
                       />
                     </th>
-                    <th className="px-2 py-2">Email Title</th>
+                    <th className="px-2 py-2">Email</th>
+                    <th className="px-2 py-2"></th>
                     <th className="px-2 py-2">Task Description</th>
                     <th className="px-2 py-2">Project</th>
                     <th className="px-2 py-2">Due Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {llmResults.map(todo => (
-                    <tr key={todo.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                      <td className="px-2 py-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedLlmTodos.includes(todo.id)}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setSelectedLlmTodos(prev => [...prev, todo.id]);
-                            } else {
-                              setSelectedLlmTodos(prev => prev.filter(id => id !== todo.id));
-                            }
-                          }}
-                        />
-                      </td>
-                      <td className="px-2 py-2">{editing?.id === todo.id && editing.field === 'description' ? (truncateText(emails.find(e => e.id === todo.id)?.subject || '', 30)) : truncateText(emails.find(e => e.id === todo.id)?.subject || '', 30)}</td>
-                      <td className="px-2 py-2">
-                        {editing?.id === todo.id && editing.field === 'description' ? (
+                  {llmResults.map(todo => {
+                    const email = emails.find(e => e.id === todo.id);
+                    return (
+                      <tr key={todo.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 group">
+                        <td className="px-2 py-2">
                           <input
-                            type="text"
-                            value={editing.value}
-                            onChange={e => updateLlmResult(todo.id, 'description', e.target.value)}
-                            onBlur={() => setEditing(null)}
-                            autoFocus
-                            className="border rounded-md px-2 py-1 text-sm w-full"
+                            type="checkbox"
+                            checked={selectedLlmTodos.includes(todo.id)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setSelectedLlmTodos(prev => [...prev, todo.id]);
+                              } else {
+                                setSelectedLlmTodos(prev => prev.filter(id => id !== todo.id));
+                              }
+                            }}
                           />
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:underline"
-                            onClick={() => setEditing({ id: todo.id, field: 'description', value: todo.description })}
+                        </td>
+                        <td className="px-2 py-2">{truncateText(email?.subject || '', 30)}</td>
+                        <td className="px-2 py-2">
+                          <button
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center px-2 py-1 border rounded-md text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                            onClick={() => setShowEmailDetails({ open: true, emailId: todo.id })}
+                            title="View email details"
                           >
-                            {truncateText(todo.description, 30)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
-                        {editing?.id === todo.id && editing.field === 'project' ? (
-                          <select
-                            value={editing.value}
-                            onChange={e => updateLlmResult(todo.id, 'project', e.target.value)}
-                            onBlur={() => setEditing(null)}
-                            autoFocus
-                            className="border rounded-md px-2 py-1 text-sm w-full"
-                          >
-                            {projectOptions.map(opt => (
-                              <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:underline"
-                            onClick={() => setEditing({ id: todo.id, field: 'project', value: todo.project })}
-                          >
-                            {todo.project}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
-                        {editing?.id === todo.id && editing.field === 'dueDate' ? (
-                          <input
-                            type="date"
-                            value={editing.value}
-                            onChange={e => updateLlmResult(todo.id, 'dueDate', e.target.value)}
-                            onBlur={() => setEditing(null)}
-                            autoFocus
-                            className="border rounded-md px-2 py-1 text-sm w-full"
-                          />
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:underline"
-                            onClick={() => setEditing({ id: todo.id, field: 'dueDate', value: todo.dueDate })}
-                          >
-                            {todo.dueDate}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                            <DocumentDuplicateIcon className="h-4 w-4 mr-1" />
+                            <span>Open</span>
+                          </button>
+                        </td>
+                        <td className="px-2 py-2">
+                          {editing?.id === todo.id && editing.field === 'description' ? (
+                            <input
+                              type="text"
+                              value={editing.value}
+                              onChange={e => updateLlmResult(todo.id, 'description', e.target.value)}
+                              onBlur={() => setEditing(null)}
+                              autoFocus
+                              className="border rounded-md px-2 py-1 text-sm w-full"
+                            />
+                          ) : (
+                            <span
+                              className="cursor-pointer hover:underline"
+                              onClick={() => setEditing({ id: todo.id, field: 'description', value: todo.description })}
+                            >
+                              {truncateText(todo.description, 30)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 py-2">
+                          {editing?.id === todo.id && editing.field === 'project' ? (
+                            <select
+                              value={editing.value}
+                              onChange={e => updateLlmResult(todo.id, 'project', e.target.value)}
+                              onBlur={() => setEditing(null)}
+                              autoFocus
+                              className="border rounded-md px-2 py-1 text-sm w-full"
+                            >
+                              <option value="Gmail">Gmail</option>
+                              {projectOptions.map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span
+                              className="cursor-pointer hover:underline"
+                              onClick={() => setEditing({ id: todo.id, field: 'project', value: todo.project })}
+                            >
+                              {todo.project}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 py-2">
+                          {editing?.id === todo.id && editing.field === 'dueDate' ? (
+                            <input
+                              type="date"
+                              value={editing.value}
+                              onChange={e => updateLlmResult(todo.id, 'dueDate', e.target.value)}
+                              onBlur={() => setEditing(null)}
+                              autoFocus
+                              className="border rounded-md px-2 py-1 text-sm w-full"
+                            />
+                          ) : (
+                            <span
+                              className="cursor-pointer hover:underline"
+                              onClick={() => setEditing({ id: todo.id, field: 'dueDate', value: todo.dueDate })}
+                            >
+                              {todo.dueDate}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              {/* Email Details Modal */}
+              {showEmailDetails.open && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-2xl min-w-md relative">
+                    <button
+                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                      onClick={() => setShowEmailDetails({ open: false, emailId: null })}
+                    >
+                      <XMarkIcon className="h-6 w-6" />
+                    </button>
+                    {(() => {
+                      const email = emails.find(e => e.id === showEmailDetails.emailId);
+                      if (!email) return <div>Email not found.</div>;
+                      // Find all emails in the chain (same subject)
+                      const chainEmails = emails.filter(e => e.subject === email.subject);
+                      // Helper to get primary receiver (To) from email object if available
+                      const getPrimaryReceiver = (emailObj: any) => {
+                        if (emailObj.to) {
+                          // If 'to' is a string like 'Name <email>', extract name
+                          const match = emailObj.to.match(/(.*)<.*>/);
+                          return match ? match[1].trim().replace(/"/g, '') : emailObj.to;
+                        }
+                        return '-';
+                      };
+                      // Helper to cap text
+                      const capText = (text: string) => text && text.length > 20 ? text.substring(0, 20) + '…' : text;
+                      return (
+                        <div>
+                          <h3 className="text-lg font-semibold mb-2">Email Details (Thread)</h3>
+                          <div className="mb-4"><span className="font-medium">Subject:</span> {email.subject}</div>
+                          <table className="w-full text-sm mb-2">
+                            <thead>
+                              <tr>
+                                <th className="text-left py-1">Sender</th>
+                                <th className="text-left py-1">Receiver</th>
+                                <th className="text-left py-1">Date</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {chainEmails.map((em, idx) => (
+                                <tr key={em.id} className="border-t border-gray-200 dark:border-gray-700">
+                                  <td className="py-1">{capText(getSenderName(em.from))}</td>
+                                  <td className="py-1">{capText(getPrimaryReceiver(em))}</td>
+                                  <td className="py-1">{em.date ? format(new Date(em.date), 'MMM d, yyyy p') : ''}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
               <div className="flex gap-4 justify-end w-full pr-8 pt-2 pb-4">
                 <button onClick={handleCancelLlm} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500">Cancel</button>
                 <button onClick={handleAddToProjects} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 ml-2" disabled={selectedLlmTodos.length === 0}>Add to projects</button>
@@ -311,18 +413,30 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
           )}
         </div>
         {!llmResults && (
-          <div className="flex justify-end items-center p-4 md:p-6 border-t dark:border-gray-700 gap-x-2">
-            <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500">
-                Cancel
-            </button>
-            <button 
-              onClick={handleConvertToTodo} 
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-800"
-              disabled={selectedEmails.length === 0 || isLoading || isProcessing}
-            >
-                {`Convert to To-do (${selectedEmails.length})`}
-            </button>
-          </div>
+          <>
+            {onLoadMoreEmails && !isLoading && !isProcessing && !llmResults && (
+              <div className="flex justify-center p-3 border-t dark:border-gray-700">
+                <button
+                  onClick={onLoadMoreEmails}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500"
+                >
+                  Load more
+                </button>
+              </div>
+            )}
+            <div className="flex justify-end items-center p-4 md:p-4 gap-x-2">
+              <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500">
+                  Cancel
+              </button>
+              <button 
+                onClick={handleConvertToTodo} 
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-800"
+                disabled={selectedEmails.length === 0 || isLoading || isProcessing}
+              >
+                  {`Convert to To-do (${selectedEmails.length})`}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

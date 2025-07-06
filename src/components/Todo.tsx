@@ -20,6 +20,7 @@ interface GmailEmail {
   id: string;
   subject: string;
   from: string;
+  to: string;
   date: string;
 }
 
@@ -73,6 +74,7 @@ export default function Todo() {
   const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
   const [isGmailLoading, setIsGmailLoading] = useState(false);
   const [gmailEmails, setGmailEmails] = useState<GmailEmail[]>([]);
+  const [gmailLastDate, setGmailLastDate] = useState<Date | null>(null);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [editingTodo, setEditingTodo] = useState<{ id: string, field: 'text' | 'project' } | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -117,35 +119,58 @@ export default function Todo() {
         await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest');
         
         try {
-          const response = await (gapi.client as any).gmail.users.messages.list({
-            'userId': 'me',
-            'q': 'category:primary',
-            'maxResults': 10,
-          });
-
-          const messages = response.result.messages;
-          console.log(`Found ${messages ? messages.length : 0} emails in Primary inbox.`);
-          if (messages && messages.length > 0) {
-            const fetchedEmails: GmailEmail[] = [];
-            for (const message of messages) {
-              const msg = await (gapi.client as any).gmail.users.messages.get({
-                'userId': 'me',
-                'id': message.id!,
-                'format': 'metadata',
-                'metadataHeaders': ['Subject', 'From', 'Date']
-              });
-              const headers = msg.result.payload!.headers!;
-              const subject = headers.find((h: any) => h.name === 'Subject')?.value || 'No Subject';
-              const from = headers.find((h: any) => h.name === 'From')?.value || 'Unknown Sender';
-              const date = headers.find((h: any) => h.name === 'Date')?.value || '';
-
-              fetchedEmails.push({ id: message.id, subject, from, date });
+          const fetchEmails = async (beforeDate?: Date) => {
+            let q = 'category:primary';
+            if (beforeDate) {
+              // Gmail expects YYYY/MM/DD format
+              const y = beforeDate.getFullYear();
+              const m = String(beforeDate.getMonth() + 1).padStart(2, '0');
+              const d = String(beforeDate.getDate()).padStart(2, '0');
+              q += ` before:${y}/${m}/${d}`;
             }
-            setGmailEmails(fetchedEmails);
-          } else {
-            console.log('No emails found in the last 7 days.');
-            setGmailEmails([]);
-          }
+            const response = await (gapi.client as any).gmail.users.messages.list({
+              'userId': 'me',
+              'q': q,
+              'maxResults': 10,
+            });
+            const messages = response.result.messages;
+            if (messages && messages.length > 0) {
+              const fetchedEmails: GmailEmail[] = [];
+              let lastDate: Date | null = null;
+              for (const message of messages) {
+                const msg = await (gapi.client as any).gmail.users.messages.get({
+                  'userId': 'me',
+                  'id': message.id!,
+                  'format': 'metadata',
+                  'metadataHeaders': ['Subject', 'From', 'To', 'Date']
+                });
+                const headers = msg.result.payload!.headers!;
+                const subject = headers.find((h: any) => h.name === 'Subject')?.value || 'No Subject';
+                const from = headers.find((h: any) => h.name === 'From')?.value || 'Unknown Sender';
+                const to = headers.find((h: any) => h.name === 'To')?.value || '';
+                const date = headers.find((h: any) => h.name === 'Date')?.value || '';
+                // Use internalDate for pagination
+                const internalDate = msg.result.internalDate ? new Date(Number(msg.result.internalDate)) : (date ? new Date(date) : null);
+                if (!lastDate || (internalDate && internalDate < lastDate)) lastDate = internalDate;
+                fetchedEmails.push({ id: message.id, subject, from, to, date });
+              }
+              return { emails: fetchedEmails, lastDate };
+            }
+            return { emails: [], lastDate: null };
+          };
+
+          // Initial fetch
+          const { emails: initialEmails, lastDate } = await fetchEmails();
+          setGmailEmails(initialEmails);
+          setGmailLastDate(lastDate);
+
+          // Expose load more function
+          (window as any).loadMoreGmailEmails = async () => {
+            if (!gmailLastDate) return;
+            const { emails: moreEmails, lastDate: newLastDate } = await fetchEmails(gmailLastDate);
+            setGmailEmails(prev => [...prev, ...moreEmails]);
+            setGmailLastDate(newLastDate);
+          };
         } catch (error) {
             console.error('Error fetching emails:', error);
             // Optionally, handle the error in the UI
@@ -944,7 +969,15 @@ export default function Todo() {
           selectedEmails={selectedEmails}
           onEmailSelect={handleEmailSelect}
           onConvertToTodo={convertEmailsToTodos}
-          projectOptions={[...new Set(todos.map(t => t.project).filter(Boolean))]}
+          onLoadMoreEmails={typeof window !== 'undefined' ? (window as any).loadMoreGmailEmails : undefined}
+          projectOptions={[
+            ...new Set(
+              todos
+                .filter(t => !t.parentId && t.status !== 'Done')
+                .map(t => t.project)
+                .filter(Boolean)
+            )
+          ]}
           onAddLlmTodosToProject={handleAddLlmTodosToProject as (llmTodos: LlmTodo[]) => void}
           allTodos={todos}
         />
