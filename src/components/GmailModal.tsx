@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { CircularProgress } from './CircularProgress';
+import type { TodoItem } from './types';
 
 interface GmailEmail {
   id: string;
@@ -19,6 +20,7 @@ interface GmailModalProps {
   onConvertToTodo: () => void;
   projectOptions: string[];
   onAddLlmTodosToProject: (llmTodos: LlmTodo[]) => void;
+  allTodos: TodoItem[];
 }
 
 // Add a type for the LLM-generated todo
@@ -29,7 +31,7 @@ export interface LlmTodo {
   dueDate: string;
 }
 
-export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails, isLoading, selectedEmails, onEmailSelect, onConvertToTodo, projectOptions, onAddLlmTodosToProject }) => {
+export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails, isLoading, selectedEmails, onEmailSelect, onConvertToTodo, projectOptions, onAddLlmTodosToProject, allTodos }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [llmResults, setLlmResults] = useState<LlmTodo[] | null>(null);
   const [editing, setEditing] = useState<{ id: string; field: 'project' | 'description' | 'dueDate'; value: string } | null>(null);
@@ -65,20 +67,51 @@ export const GmailModal: React.FC<GmailModalProps> = ({ isOpen, onClose, emails,
   const handleConvertToTodo = async () => {
     setIsProcessing(true);
     setLlmResults(null);
-    // Simulate LLM API call
-    setTimeout(() => {
-      // For demo, create one todo per selected email
+    try {
+      // Prepare data for API
+      const selectedEmailObjs = emails.filter(e => selectedEmails.includes(e.id));
+      // Only include unique, active project names from top-level todos
+      const activeProjectNames = [
+        ...new Set(
+          allTodos
+            .filter(t => !t.parentId)
+            .map(t => t.project)
+            .filter(Boolean)
+        ),
+      ];
+      const apiBody = {
+        projects: activeProjectNames.map(title => ({ title })),
+        emails: selectedEmailObjs.map(e => ({ id: e.id, title: e.subject, content: e.subject })),
+      };
+      console.log('Sending to OpenAI backend:', apiBody);
+      // Call your deployed Firebase function
+      const response = await fetch(
+        "https://us-central1-task-fini.cloudfunctions.net/generateTodos",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(apiBody),
+        }
+      );
+      if (!response.ok) throw new Error("Failed to call LLM function");
+      const data = await response.json();
+      console.log('Received from OpenAI backend:', data);
+      // data.todos: [{ emailId, project, description, priority? }]
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const results = emails.filter(e => selectedEmails.includes(e.id)).map(email => ({
-        id: email.id,
-        project: 'Gmail',
-        description: `Reply ${getSenderName(email.from)}: ${email.subject}`,
+      const results = data.todos.map((todo: any) => ({
+        id: todo.emailId,
+        project: todo.project,
+        description: todo.description,
         dueDate: tomorrow.toISOString().split('T')[0],
+        priority: todo.priority || 'medium',
       }));
       setLlmResults(results);
+    } catch (err) {
+      alert("Failed to generate todos: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
       setIsProcessing(false);
-    }, 2000);
+    }
   };
 
   const handleAddToProjects = () => {

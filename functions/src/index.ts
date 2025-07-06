@@ -14,6 +14,9 @@ import {setGlobalOptions} from "firebase-functions/v2/options";
 import * as firebaseFunctions from "firebase-functions";
 import OpenAI from "openai";
 import type {Request, Response} from "express";
+import cors from "cors";
+
+const corsHandler = cors({origin: true});
 
 console.log("Loaded OPENAI_API_KEY:", process.env.OPENAI_API_KEY);
 console.log("OPENAI_API_KEY is set:", !!process.env.OPENAI_API_KEY);
@@ -41,13 +44,14 @@ const openai = new OpenAI({
 console.log("OPENAI_API_KEY is set:", !!process.env.OPENAI_API_KEY);
 
 exports.generateTodos = firebaseFunctions.https.onRequest(
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      // 1. Get data from frontend
-      const {projects, emails} = req.body;
+  (req: Request, res: Response): void => {
+    corsHandler(req, res, async () => {
+      try {
+        // 1. Get data from frontend
+        const {projects, emails} = req.body;
 
-      // 2. Build the prompt
-      const prompt = `
+        // 2. Build the prompt
+        const prompt = `
 You are an expert productivity assistant. Given the following projects and their to-dos:
 ${JSON.stringify(projects, null, 2)}
 
@@ -68,32 +72,33 @@ Respond in this JSON format:
 ]
 `;
 
-      // 3. Call OpenAI
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {role: "user", content: prompt},
-        ],
-        max_tokens: 600,
-        temperature: 0.4,
-      });
+        // 3. Call OpenAI
+        const completion = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {role: "user", content: prompt},
+          ],
+          max_tokens: 600,
+          temperature: 0.4,
+        });
 
-      // 4. Parse and return the result
-      const text = completion.choices[0]?.message?.content;
-      let todosGenerated;
-      try {
-        todosGenerated = JSON.parse(text || "[]");
-      } catch (e) {
-        res.status(500).json({error: "Failed to parse LLM response", raw: text});
-        return;
+        // 4. Parse and return the result
+        const text = completion.choices[0]?.message?.content;
+        let todosGenerated;
+        try {
+          todosGenerated = JSON.parse(text || "[]");
+        } catch (e) {
+          res.status(500).json({error: "Failed to parse LLM response", raw: text});
+          return;
+        }
+        res.json({todos: todosGenerated});
+      } catch (err) {
+        // 'err' is unknown, so cast to Error for message
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.error(err);
+        res.status(500).json({error: errorMsg});
       }
-      res.json({todos: todosGenerated});
-    } catch (err) {
-      // 'err' is unknown, so cast to Error for message
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(err);
-      res.status(500).json({error: errorMsg});
-    }
+    });
   }
 );
 

@@ -292,7 +292,7 @@ export default function Todo() {
     try {
       const subtasks = todos.filter(t => t.parentId === parentTask.id);
       console.log('Adding subtask...');
-      await addDoc(collection(db, 'todos'), {
+      const newSubtask = {
         text: 'task',
         project: parentTask.text,
         dueDate: parentTask.dueDate,
@@ -307,8 +307,8 @@ export default function Todo() {
         parentId: parentTask.id,
         order: getNextOrder(subtasks),
         tag: null,
-        priority: undefined,
-      });
+      };
+      await addDoc(collection(db, 'todos'), newSubtask);
       // Auto-expand after adding
       setCollapsedTasks(prev => prev.filter(id => id !== parentTask.id));
       console.log('Subtask added successfully');
@@ -847,52 +847,33 @@ export default function Todo() {
   // Handler to add LLM-generated todos to a project in To do
   const handleAddLlmTodosToProject = async (llmTodos: LlmTodo[]) => {
     if (!user || !llmTodos || llmTodos.length === 0) return;
-    const projectName = llmTodos[0].project;
-    let project = todos.find(t => !t.parentId && t.text === projectName && t.status === 'To do');
-    if (!project) {
-      const topLevelProjects = todos.filter(t => !t.parentId);
-      const newProjectRef = await addDoc(collection(db, 'todos'), {
-        text: projectName,
-        priority: 'medium',
-        project: projectName,
-        dueDate: '',
-        status: 'To do',
-        creator: user.displayName || user.email || 'Unknown',
-        stakeholder: user.displayName || user.email || 'Unknown',
-        created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-        userId: user.uid,
-        timestamp: new Date(),
-        source: 'gmail',
-        progress: 0,
-        order: getNextOrder(topLevelProjects),
-        tag: null,
-      });
-      project = {
-        id: newProjectRef.id,
-        text: projectName,
-        priority: 'medium',
-        project: projectName,
-        dueDate: '',
-        status: 'To do',
-        creator: user.displayName || user.email || 'Unknown',
-        stakeholder: user.displayName || user.email || 'Unknown',
-        created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-        userId: user.uid,
-        timestamp: new Date(),
-        source: 'gmail',
-        progress: 0,
-        order: getNextOrder(topLevelProjects),
-        tag: null,
-      };
-    }
-    if (!project) return;
-    const subtasks = todos.filter(t => t.parentId === project.id);
-    let order = getNextOrder(subtasks);
     for (const todo of llmTodos) {
+      // 1. Check if the project exists (top-level, no parentId)
+      let project = todos.find(t => !t.parentId && t.text === todo.project);
+      // 2. If not, create it
+      if (!project) {
+        const topLevelProjects = todos.filter(t => !t.parentId);
+        const newProjectRef = await addDoc(collection(db, 'todos'), {
+          text: todo.project,
+          project: todo.project,
+          dueDate: '',
+          status: 'To do',
+          creator: user.displayName || user.email || 'Unknown',
+          stakeholder: user.displayName || user.email || 'Unknown',
+          created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+          userId: user.uid,
+          timestamp: new Date(),
+          source: 'gmail',
+          progress: 0,
+          order: getNextOrder(topLevelProjects),
+          tag: null,
+        });
+        project = { id: newProjectRef.id, text: todo.project } as TodoItem;
+      }
+      // 3. Add the generated to-do as a subtask under the project
       await addDoc(collection(db, 'todos'), {
         text: todo.description,
-        priority: 'medium',
-        project: projectName,
+        project: todo.project,
         dueDate: todo.dueDate,
         status: 'To do',
         creator: user.displayName || user.email || 'Unknown',
@@ -902,9 +883,8 @@ export default function Todo() {
         timestamp: new Date(),
         source: 'gmail',
         progress: 0,
-        parentId: project.id,
-        order: order++,
         tag: null,
+        parentId: project.id, // <-- Make it a subtask
       });
     }
     setIsGmailModalOpen(false);
@@ -966,6 +946,7 @@ export default function Todo() {
           onConvertToTodo={convertEmailsToTodos}
           projectOptions={[...new Set(todos.map(t => t.project).filter(Boolean))]}
           onAddLlmTodosToProject={handleAddLlmTodosToProject as (llmTodos: LlmTodo[]) => void}
+          allTodos={todos}
         />
         <TaskDetailModal 
           isOpen={!!selectedTask}
