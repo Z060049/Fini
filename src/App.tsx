@@ -76,7 +76,7 @@ function App() {
               <div className="bg-green-100 dark:bg-gray-700 p-1 rounded-full">
                 <CheckIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
-              <h1 className="text-xl font-bold text-gray-100">Task Fini: simple to-do list</h1>
+              <h1 className="text-xl font-bold text-gray-100">Task Fini: smart to-do list</h1>
             </div>
             <div className="relative">
               <button ref={buttonRef} onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
