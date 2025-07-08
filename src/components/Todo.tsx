@@ -938,10 +938,10 @@ export default function Todo() {
               <div className="mt-6">
                 <h3 className="text-md font-semibold mb-3 dark:text-gray-200">Import Tasks</h3>
                 <div className="flex flex-col space-y-2">
-                  <button onClick={() => handleGmailAuth()} className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                  {/* <button onClick={() => handleGmailAuth()} className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
                     <img src={GmailIconSrc} alt="Gmail" className="h-5 w-5" />
                     <span>Gmail</span>
-                  </button>
+                  </button> */}
                   <button disabled className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-3 py-1.5 rounded-md transition-colors text-sm dark:bg-gray-700 dark:text-gray-200 opacity-50 cursor-not-allowed">
                     <img src={SlackIconSrc} alt="Slack" className="h-5 w-5" />
                     <span>Slack</span>
