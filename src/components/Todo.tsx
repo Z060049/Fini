@@ -69,7 +69,7 @@ export default function Todo() {
   const [todosLoaded, setTodosLoaded] = useState(false);
   const [newTodo, setNewTodo] = useState('');
   const [newProject, setNewProject] = useState('');
-  const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high' | 'urgent' | 'none'>('none');
   const [newDueDate, setNewDueDate] = useState('');
   const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
   const [isGmailLoading, setIsGmailLoading] = useState(false);
@@ -79,7 +79,14 @@ export default function Todo() {
   const [editingTodo, setEditingTodo] = useState<{ id: string, field: 'text' | 'project' } | null>(null);
   const [editingText, setEditingText] = useState('');
   const [selectedTask, setSelectedTask] = useState<TodoItem | null>(null);
-  const [collapsedTasks, setCollapsedTasks] = useState<string[]>([]);
+  const [collapsedTasks, setCollapsedTasks] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('collapsedTasks');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [editingDueDate, setEditingDueDate] = useState<{ id: string } | null>(null);
   const [editingDueDateValue, setEditingDueDateValue] = useState('');
   const [selectedProject, setSelectedProject] = useState<TodoItem | null>(null);
@@ -104,6 +111,12 @@ export default function Todo() {
 
     return () => unsubscribe();
   }, [user]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('collapsedTasks', JSON.stringify(collapsedTasks));
+    } catch {}
+  }, [collapsedTasks]);
 
   const handleGmailAuth = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -283,7 +296,7 @@ export default function Todo() {
     const topLevelProjects = todos.filter(t => !t.parentId);
     await addDoc(collection(db, 'todos'), {
       text: newTodo,
-      priority: newPriority,
+      priority: newPriority === 'none' ? undefined : newPriority,
       project: newTodo,
       dueDate: newDueDate,
       status: 'To do',
@@ -299,7 +312,7 @@ export default function Todo() {
     });
     setNewTodo('');
     setNewProject('');
-    setNewPriority('medium');
+    setNewPriority('none');
     setNewDueDate('');
   };
 
@@ -926,6 +939,7 @@ export default function Todo() {
               <div className="flex flex-col space-y-3">
                 <input type="text" value={newTodo} onChange={(e) => setNewTodo(e.target.value)} placeholder="Project name" className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white" />
                 <select value={newPriority} onChange={(e) => setNewPriority(e.target.value as any)} className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-700 dark:text-white">
+                  <option value="none">No Priority</option>
                   <option value="low">Low Priority</option>
                   <option value="medium">Medium Priority</option>
                   <option value="high">High Priority</option>

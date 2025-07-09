@@ -38,7 +38,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [text, setText] = useState('');
   const [project, setProject] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent' | 'none'>('none');
   const [description, setDescription] = useState('');
   const [selectedTag, setSelectedTag] = useState<'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -48,7 +48,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setText(task.text);
       setProject(task.project);
       setDueDate(task.dueDate);
-      setPriority(task.priority || 'medium');
+      setPriority(task.priority || 'none');
       setDescription(task.description || '');
       setSelectedTag(task.tag || null);
     }
@@ -71,7 +71,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const handleSave = () => {
     if (!task) return;
 
-    onUpdate(task.id, { text, project, dueDate, priority, description });
+    onUpdate(task.id, { text, project, dueDate, priority: priority === 'none' ? undefined : priority, description });
     onClose();
   };
 
@@ -135,6 +135,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               <div className="flex items-center">
                 <span className="w-1/4 text-sm font-medium text-gray-500 dark:text-gray-300">Priority</span>
                 <div className="w-3/4 flex gap-2">
+                  <button
+                    key="none"
+                    onClick={() => setPriority('none')}
+                    className={`px-3 py-1 text-sm rounded-full capitalize ${priority === 'none' ? 'bg-gray-200 text-gray-700 ring-2 ring-blue-500' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}
+                  >
+                    No Priority
+                  </button>
                   {(['low', 'medium', 'high', 'urgent'] as const).map(p => (
                     <button
                       key={p}
