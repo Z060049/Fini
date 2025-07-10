@@ -98,7 +98,8 @@ export default function Todo() {
       return;
     }
 
-    const q = query(collection(db, 'todos'), where('userId', '==', user.uid), orderBy('timestamp', 'asc'));
+    // Switch back: Order by 'order' for top-level projects and tasks
+    const q = query(collection(db, 'todos'), where('userId', '==', user.uid), orderBy('order', 'asc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const todosData: TodoItem[] = [];
       querySnapshot.forEach((doc) => {
@@ -565,8 +566,9 @@ export default function Todo() {
     }, {} as Record<string, TodoItem[]>);
 
     // Only show user-created top-level projects
+    // Updated: Sort ONLY by order (no fallback)
     const topLevelTodos = todos.filter(todo => todo.status === status && !todo.parentId)
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || ((a.timestamp?.toDate?.() || 0) - (b.timestamp?.toDate?.() || 0)));
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     return (
       <div key={status}>
