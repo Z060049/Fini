@@ -4,7 +4,7 @@ export interface TodoItem {
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   project: string;
   dueDate: string;
-  status: 'To do' | 'Doing' | 'Done';
+  status: '' | 'On-going' | 'Blocked' | 'Paused' | 'To do' | 'Doing' | 'Done';
   creator: string;
   stakeholder: string;
   created: string;

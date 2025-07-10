@@ -41,6 +41,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent' | 'none'>('none');
   const [description, setDescription] = useState('');
   const [selectedTag, setSelectedTag] = useState<'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null>(null);
+  const [status, setStatus] = useState<string>('');
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,6 +52,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setPriority(task.priority || 'none');
       setDescription(task.description || '');
       setSelectedTag(task.tag || null);
+      setStatus(task.status || '');
     }
   }, [task]);
   
@@ -71,7 +73,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const handleSave = () => {
     if (!task) return;
 
-    onUpdate(task.id, { text, project, dueDate, priority: priority === 'none' ? undefined : priority, description });
+    onUpdate(task.id, { text, project, dueDate, priority: priority === 'none' ? undefined : priority, description, status });
     onClose();
   };
 
@@ -154,6 +156,18 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 </div>
               </div>
               
+              <div className="flex items-center">
+                <span className="w-1/4 text-sm font-medium text-gray-500 dark:text-gray-300">Status</span>
+                <div className="w-3/4">
+                  <select value={status} onChange={e => setStatus(e.target.value)} className="border rounded-md px-2 py-1 text-sm w-full">
+                    <option value="">No Status</option>
+                    <option value="On-going">On-going</option>
+                    <option value="Blocked">Blocked</option>
+                    <option value="Paused">Paused</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="flex items-center mb-2">
                 <span className="w-1/4 text-sm font-medium text-gray-500 dark:text-gray-300">Tag</span>
                 <div className="w-3/4 flex items-center gap-3">

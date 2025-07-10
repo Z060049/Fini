@@ -585,6 +585,7 @@ export default function Todo() {
                 <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase px-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="w-12 shrink-0"></span>
                   <span className="flex-1 px-2 text-left">Project</span>
+                  <span className="w-24 shrink-0 px-2 text-center">Status</span>
                   <span className="w-20 shrink-0 px-2 text-center">Tag</span>
                   <span className="w-24 shrink-0 px-2 text-center">Source</span>
                   <span className="w-28 shrink-0 px-2 text-center">Priority</span>
@@ -671,6 +672,29 @@ export default function Todo() {
                             </div>
                           </div>
                           {/* Tags column */}
+                          <span className="w-24 shrink-0 px-2 flex items-center justify-center">
+                            <span className="relative flex items-center">
+                              {['On-going', 'Blocked', 'Paused'].includes(parent.status) ? (
+                                <>
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
+                                    {parent.status}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      handleUpdateTodo(parent.id, { status: undefined });
+                                    }}
+                                    className="ml-1 w-4 h-4 bg-white rounded-full border border-gray-300 flex items-center justify-center text-xs text-gray-500 z-20 shadow"
+                                    style={{ fontSize: '10px', lineHeight: 1 }}
+                                    aria-label="Remove status"
+                                  >
+                                    ×
+                                  </button>
+                                </>
+                              ) : null}
+                            </span>
+                          </span>
                           <span className="w-20 shrink-0 px-2 flex items-center justify-center">
                             {parent.tag ? (
                               <span className="relative group flex items-center justify-center">
@@ -795,6 +819,29 @@ export default function Todo() {
                                           </div>
                                         </div>
                                         {/* Tags column */}
+                                        <span className="w-24 shrink-0 px-2 flex items-center justify-center">
+                                          <span className="relative flex items-center">
+                                            {['On-going', 'Blocked', 'Paused'].includes(todo.status) ? (
+                                              <>
+                                                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
+                                                  {todo.status}
+                                                </span>
+                                                <button
+                                                  type="button"
+                                                  onClick={e => {
+                                                    e.stopPropagation();
+                                                    handleUpdateTodo(todo.id, { status: undefined });
+                                                  }}
+                                                  className="ml-1 w-4 h-4 bg-white rounded-full border border-gray-300 flex items-center justify-center text-xs text-gray-500 z-20 shadow"
+                                                  style={{ fontSize: '10px', lineHeight: 1 }}
+                                                  aria-label="Remove status"
+                                                >
+                                                  ×
+                                                </button>
+                                              </>
+                                            ) : null}
+                                          </span>
+                                        </span>
                                         <span className="w-20 shrink-0 px-2 flex items-center justify-center">
                                           {todo.tag ? (
                                             <span className="relative group flex items-center justify-center">

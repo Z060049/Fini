@@ -28,14 +28,16 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [description, setDescription] = useState('');
+  const [status, setStatus] = useState<string>('');
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (project) {
       setText(project.text);
       setDueDate(project.dueDate);
-      setPriority(project.priority || 'medium');
+      setPriority(project.priority || 'none');
       setDescription(project.description || '');
+      setStatus(project.status || '');
     }
   }, [project]);
   
@@ -55,7 +57,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
 
   const handleSave = () => {
     if (!project) return;
-    onUpdate(project.id, { text, dueDate, priority, description });
+    onUpdate(project.id, { text, dueDate, priority: priority === 'none' ? undefined : priority, description, status });
     onClose();
   };
 
@@ -124,6 +126,18 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
                 </div>
               </div>
               
+              <div className="flex items-center">
+                <span className="w-1/4 text-sm font-medium text-gray-500 dark:text-gray-300">Status</span>
+                <div className="w-3/4">
+                  <select value={status} onChange={e => setStatus(e.target.value)} className="border rounded-md px-2 py-1 text-sm w-full">
+                    <option value="">No Status</option>
+                    <option value="On-going">On-going</option>
+                    <option value="Blocked">Blocked</option>
+                    <option value="Paused">Paused</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-2">What is this project about?</span>
                 <textarea
