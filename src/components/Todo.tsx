@@ -387,21 +387,14 @@ export default function Todo() {
     if (!draggedTodo) return;
 
     if (type === 'PROJECT') {
-      // Dragging a project between status columns
-      const projectsInStatus = todos.filter(t => !t.parentId && t.status === destination.droppableId);
-      const reordered = [...projectsInStatus];
+      // Dragging a project to reorder
+      const projects = todos.filter(t => !t.parentId);
+      const reordered = [...projects];
       const fromIndex = reordered.findIndex(t => t.id === draggedTodo.id);
       if (fromIndex !== -1) reordered.splice(fromIndex, 1);
       reordered.splice(destination.index, 0, draggedTodo);
       reordered.forEach((proj, idx) => {
-        handleUpdateTodo(proj.id, { order: idx, status: destination.droppableId as 'To do' | 'Doing' | 'Done' });
-        if (proj.id === draggedTodo.id) {
-          // Move all subtasks to new status
-          const subtasks = todos.filter(todo => todo.parentId === proj.id);
-          subtasks.forEach(subtask => {
-            handleUpdateTodo(subtask.id, { status: destination.droppableId as 'To do' | 'Doing' | 'Done' });
-          });
-        }
+        handleUpdateTodo(proj.id, { order: idx });
       });
       return;
     }
