@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckIcon, PencilIcon, TrashIcon, Bars3Icon, PencilSquareIcon, DocumentDuplicateIcon, PlusIcon, ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PencilIcon, TrashIcon, Bars3Icon, PencilSquareIcon, DocumentDuplicateIcon, PlusIcon, ChevronRightIcon, ChevronDownIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '@heroicons/react/24/outline';
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, Timestamp, writeBatch, deleteField } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -295,9 +295,8 @@ export default function Todo() {
   const addTodo = async () => {
     if (!newTodo.trim() || !user) return;
     const topLevelProjects = todos.filter(t => !t.parentId);
-    await addDoc(collection(db, 'todos'), {
+    const newProjectData: any = {
       text: newTodo,
-      priority: newPriority === 'none' ? undefined : newPriority,
       project: newTodo,
       dueDate: newDueDate,
       status: 'To do',
@@ -310,7 +309,11 @@ export default function Todo() {
       progress: 0,
       order: getNextOrder(topLevelProjects),
       tag: null,
-    });
+    };
+    if (newPriority !== 'none') {
+      newProjectData.priority = newPriority;
+    }
+    await addDoc(collection(db, 'todos'), newProjectData);
     setNewTodo('');
     setNewProject('');
     setNewPriority('none');
@@ -669,7 +672,7 @@ export default function Todo() {
                           {/* Tags column */}
                           <span className="w-24 shrink-0 px-2 flex items-center justify-center">
                             <span className="relative flex items-center">
-                              {['On-going', 'Blocked', 'Paused'].includes(parent.status) ? (
+                              {['Blocked', 'Paused'].includes(parent.status) ? (
                                 <>
                                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
                                     {parent.status}
@@ -816,7 +819,7 @@ export default function Todo() {
                                         {/* Tags column */}
                                         <span className="w-24 shrink-0 px-2 flex items-center justify-center">
                                           <span className="relative flex items-center">
-                                            {['On-going', 'Blocked', 'Paused'].includes(todo.status) ? (
+                                            {['Blocked', 'Paused'].includes(todo.status) ? (
                                               <>
                                                 <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
                                                   {todo.status}
@@ -1009,6 +1012,8 @@ export default function Todo() {
                 </div>
               </div>
             </div>
+            {/* Vertical Divider */}
+            <div className="w-px bg-gray-200 dark:bg-gray-700 mx-2" style={{ minHeight: '400px' }} />
             {/* Main Content Area */}
             <div className="flex-grow">
               <div className="space-y-6">

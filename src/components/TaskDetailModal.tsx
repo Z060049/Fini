@@ -8,7 +8,7 @@ interface TodoItem {
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   project: string;
   dueDate: string;
-  status: 'To do' | 'Doing' | 'Done';
+  status: 'Blocked' | 'Normal';
   creator: string;
   stakeholder: string;
   created: string;
@@ -41,7 +41,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent' | 'none'>('none');
   const [description, setDescription] = useState('');
   const [selectedTag, setSelectedTag] = useState<'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null>(null);
-  const [status, setStatus] = useState<string>('');
+  const [status, setStatus] = useState<'Blocked' | 'Normal' | undefined>(undefined);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setPriority(task.priority || 'none');
       setDescription(task.description || '');
       setSelectedTag(task.tag || null);
-      setStatus(task.status || '');
+      setStatus(task.status as 'Blocked' | 'Normal' | undefined);
     }
   }, [task]);
   
@@ -159,11 +159,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               <div className="flex items-center">
                 <span className="w-1/4 text-sm font-medium text-gray-500 dark:text-gray-300">Status</span>
                 <div className="w-3/4">
-                  <select value={status} onChange={e => setStatus(e.target.value)} className="border rounded-md px-2 py-1 text-sm w-full">
+                  <select value={status ?? ''} onChange={e => setStatus(e.target.value ? e.target.value as typeof status : undefined)} className="border rounded-md px-2 py-1 text-sm w-full">
                     <option value="">No Status</option>
-                    <option value="On-going">On-going</option>
+                    <option value="Normal">Normal</option>
                     <option value="Blocked">Blocked</option>
-                    <option value="Paused">Paused</option>
                   </select>
                 </div>
               </div>
