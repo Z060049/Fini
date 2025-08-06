@@ -15,6 +15,7 @@ import { GmailModal } from './GmailModal';
 import TaskDetailModal from './TaskDetailModal';
 import ProjectDetailModal from './ProjectDetailModal';
 import type { LlmTodo } from './GmailModal';
+import type { TodoItem } from './types';
 
 interface GmailEmail {
   id: string;
@@ -24,26 +25,7 @@ interface GmailEmail {
   date: string;
 }
 
-interface TodoItem {
-  id: string;
-  text: string;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
-  project: string;
-  dueDate: string;
-  status: 'To do' | 'Doing' | 'Done';
-  creator: string;
-  stakeholder: string;
-  created: string;
-  source: 'manual' | 'slack' | 'zoom' | 'gmail';
-  progress: number;
-  userId?: string;
-  timestamp?: any;
-  description?: string;
-  parentId?: string | null;
-  order?: number;
-  isDefault?: boolean;
-  tag?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null;
-}
+
 
 // Tag color mapping helper
 const tagColorMap: Record<string, string> = {
@@ -366,8 +348,8 @@ export default function Todo() {
     await deleteDoc(doc(db, 'todos', id));
   };
   
-  const toggleTodoStatus = async (id: string, currentStatus: 'To do' | 'Doing' | 'Done') => {
-    let newStatus: 'To do' | 'Doing' | 'Done' = 'Done';
+  const toggleTodoStatus = async (id: string, currentStatus: '' | 'On-going' | 'Blocked' | 'Paused' | 'To do' | 'Doing' | 'Done') => {
+    let newStatus: '' | 'On-going' | 'Blocked' | 'Paused' | 'To do' | 'Doing' | 'Done' = 'Done';
     const updatedData: Partial<TodoItem> = {};
 
     if (currentStatus === 'Done') {
@@ -477,7 +459,7 @@ export default function Todo() {
   const handleUpdateTodo = async (id: string, updatedData: Partial<TodoItem>) => {
     if (!user) return;
     
-    // Optimistic update (do not set priority to deleteField() here)
+    // Optimistic update (do not set priority/status to deleteField() here)
     setTodos(prevTodos => 
       prevTodos.map(todo => {
         if (todo.id === id) {
@@ -485,6 +467,11 @@ export default function Todo() {
           if (updatedData.hasOwnProperty('priority') && updatedData.priority === undefined) {
             const { priority, ...rest } = updatedData;
             return { ...todo, ...rest, priority: undefined };
+          }
+          // If status is being cleared, set to empty string
+          if (updatedData.hasOwnProperty('status') && updatedData.status === undefined) {
+            const { status, ...rest } = updatedData;
+            return { ...todo, ...rest, status: '' };
           }
           return { ...todo, ...updatedData };
         }
@@ -497,6 +484,9 @@ export default function Todo() {
     const firestoreUpdate: any = { ...updatedData };
     if (updatedData.hasOwnProperty('priority') && updatedData.priority === undefined) {
       firestoreUpdate.priority = deleteField();
+    }
+    if (updatedData.hasOwnProperty('status') && updatedData.status === undefined) {
+      firestoreUpdate.status = deleteField();
     }
     await updateDoc(todoDoc, firestoreUpdate);
   };
@@ -557,7 +547,7 @@ export default function Todo() {
     }
   };
 
-  const renderTodoList = (status: 'To do') => {
+  const renderTodoList = () => {
     const subtasksByParentId = todos.reduce((acc, todo) => {
       if (todo.parentId) {
         if (!acc[todo.parentId]) {
@@ -568,22 +558,22 @@ export default function Todo() {
       return acc;
     }, {} as Record<string, TodoItem[]>);
 
-    // Only show user-created top-level projects
+    // Show all user-created top-level projects regardless of status
     // Updated: Sort ONLY by order (no fallback)
-    const topLevelTodos = todos.filter(todo => todo.status === status && !todo.parentId)
+    const topLevelTodos = todos.filter(todo => !todo.parentId)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     return (
-      <div key={status}>
-        <h2 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">{status}</h2>
-        <Droppable droppableId={status} type="PROJECT">
+      <div key="projects">
+        <h2 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">Projects</h2>
+        <Droppable droppableId="projects" type="PROJECT">
           {(provided, snapshot) => (
             <div ref={provided.innerRef} {...provided.droppableProps}>
               {topLevelTodos.length > 0 && (
                 <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase px-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="w-12 shrink-0"></span>
                   <span className="flex-1 px-2 text-left">Project</span>
-                  <span className="w-24 shrink-0 px-2 text-center">Status</span>
+                  <span className="w-32 shrink-0 px-2 text-center">Status</span>
                   <span className="w-20 shrink-0 px-2 text-center">Tag</span>
                   <span className="w-24 shrink-0 px-2 text-center">Source</span>
                   <span className="w-28 shrink-0 px-2 text-center">Priority</span>
@@ -816,12 +806,16 @@ export default function Todo() {
                                             </button>
                                           </div>
                                         </div>
-                                        {/* Tags column */}
-                                        <span className="w-24 shrink-0 px-2 flex items-center justify-center">
+                                        {/* Status column */}
+                                        <span className="w-32 shrink-0 px-2 flex items-center justify-center">
                                           <span className="relative flex items-center">
-                                            {['Blocked', 'Paused'].includes(todo.status) ? (
+                                            {['Blocked', 'Paused', 'On-going'].includes(todo.status) ? (
                                               <>
-                                                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
+                                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                  todo.status === 'On-going' 
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                                    : 'bg-gray-200 text-gray-700'
+                                                }`}>
                                                   {todo.status}
                                                 </span>
                                                 <button
@@ -1017,7 +1011,7 @@ export default function Todo() {
             {/* Main Content Area */}
             <div className="flex-grow">
               <div className="space-y-6">
-                {renderTodoList('To do')}
+                {renderTodoList()}
               </div>
             </div>
           </div>

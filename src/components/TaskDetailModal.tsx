@@ -1,22 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { CircularProgress } from './CircularProgress';
-
-interface TodoItem {
-  id: string;
-  text: string;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
-  project: string;
-  dueDate: string;
-  status: 'Blocked' | 'Normal';
-  creator: string;
-  stakeholder: string;
-  created: string;
-  source: 'manual' | 'slack' | 'zoom' | 'gmail';
-  progress: number;
-  description?: string;
-  tag?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null;
-}
+import type { TodoItem } from './types';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -41,7 +26,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent' | 'none'>('none');
   const [description, setDescription] = useState('');
   const [selectedTag, setSelectedTag] = useState<'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | null>(null);
-  const [status, setStatus] = useState<'Blocked' | 'Normal' | undefined>(undefined);
+  const [status, setStatus] = useState<'' | 'On-going' | 'Blocked' | 'Paused' | 'To do' | 'Doing' | 'Done' | undefined>(undefined);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,7 +37,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setPriority(task.priority || 'none');
       setDescription(task.description || '');
       setSelectedTag(task.tag || null);
-      setStatus(task.status as 'Blocked' | 'Normal' | undefined);
+      setStatus(task.status);
     }
   }, [task]);
   
@@ -161,8 +146,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 <div className="w-3/4">
                   <select value={status ?? ''} onChange={e => setStatus(e.target.value ? e.target.value as typeof status : undefined)} className="border rounded-md px-2 py-1 text-sm w-full">
                     <option value="">No Status</option>
-                    <option value="Normal">Normal</option>
+                    <option value="On-going">On-going</option>
                     <option value="Blocked">Blocked</option>
+                    <option value="Paused">Paused</option>
                   </select>
                 </div>
               </div>

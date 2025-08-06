@@ -1,26 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { CircularProgress } from './CircularProgress';
-
-interface ProjectItem {
-  id: string;
-  text: string;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
-  dueDate: string;
-  status: 'To do' | 'Doing' | 'Done';
-  creator: string;
-  stakeholder: string;
-  created: string;
-  source: 'manual' | 'slack' | 'zoom' | 'gmail';
-  progress: number;
-  description?: string;
-}
+import type { TodoItem } from './types';
 
 interface ProjectDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  project: ProjectItem | null;
-  onUpdate: (projectId: string, updatedData: Partial<ProjectItem>) => void;
+  project: TodoItem | null;
+  onUpdate: (projectId: string, updatedData: Partial<TodoItem>) => void;
 }
 
 const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose, project, onUpdate }) => {
