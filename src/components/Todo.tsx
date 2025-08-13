@@ -320,7 +320,7 @@ export default function Todo() {
         text: 'task',
         project: parentTask.text,
         dueDate: parentTask.dueDate,
-        status: parentTask.status,
+        status: '', // Always start with no status for new subtasks
         creator: user.displayName || user.email || 'Unknown',
         stakeholder: user.displayName || user.email || 'Unknown',
         created: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
@@ -662,9 +662,9 @@ export default function Todo() {
                           {/* Tags column */}
                           <span className="w-24 shrink-0 px-2 flex items-center justify-center">
                             <span className="relative flex items-center">
-                              {['Blocked', 'Paused'].includes(parent.status) ? (
+                              {['Blocked', 'Paused', 'On-going'].includes(parent.status) ? (
                                 <>
-                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
+                                  <span className={`px-3 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap min-w-[80px] text-center ${parent.status === 'On-going' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-200 text-gray-700'}`} style={{display: 'inline-block'}}>
                                     {parent.status}
                                   </span>
                                   <button
